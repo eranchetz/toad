@@ -247,11 +247,15 @@ class Conversation(containers.Vertical):
         yield Throbber(id="throbber")
         yield Menu(
             [
-                Menu.Item("a", "Do an A thing", key="a"),
-                Menu.Item("b", "Do an B thing", key="b"),
-                Menu.Item("c", "Copy to Clipboard", key="c"),
+                Menu.Item("app.notify('You selected A')", "Do an A thing", key="a"),
+                Menu.Item("app.notify('You selected B')", "Do an B thing", key="b"),
+                Menu.Item(
+                    "app.notify('You selected Copy to Clipboard')",
+                    "Copy to Clipboard",
+                    key="c",
+                ),
                 Menu.Item("x", "Expand details", key="x"),
-                Menu.Item("c", "This doesn't have a key, but does have a long label"),
+                Menu.Item("1", "This doesn't have a key, but does have a long label"),
             ]
         )
         with Contents(id="contents"):

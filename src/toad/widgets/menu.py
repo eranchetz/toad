@@ -2,9 +2,11 @@ from dataclasses import dataclass
 
 from typing import NamedTuple
 
+from textual import on
 from textual.app import ComposeResult
 from textual.widgets import ListView, ListItem, Label
 from textual._partition import partition
+from textual import events
 
 
 class MenuOption(ListItem):
@@ -19,7 +21,6 @@ class MenuOption(ListItem):
     def compose(self) -> ComposeResult:
         yield Label(self._key or " ", id="key")
         yield Label(self._description, id="description")
-        # if self._key is not None:
 
 
 class Menu(ListView):
@@ -34,27 +35,33 @@ class Menu(ListView):
         background: $panel-darken-1;
         border: heavy black;
    
-        & > MenuOption {            
-        
-
+        & > MenuOption {                    
             layout: horizontal;            
             width: 1fr;            
             padding: 0 1;
             height: auto !important;
             overflow: auto;
-            expand: optimal;
-            
+            expand: optimal;            
             #description {                        
                 color: $text 80%;
                 width: 1fr;                    
             }
             #key {                
-                padding-right: 1;
-                
+                padding-right: 1;                
                 text-style: bold;
             }                            
+           
         }
 
+        &:blur {
+            background-tint: transparent;
+            & > ListItem.-highlight {
+                color: $block-cursor-blurred-foreground;
+                background: $block-cursor-blurred-background 30%;
+                text-style: $block-cursor-blurred-text-style;
+            }
+        }
+        
         &:focus {
             background-tint: transparent;
             & > ListItem.-highlight {
@@ -94,3 +101,19 @@ class Menu(ListView):
 
     def on_mount(self) -> None:
         self._insert_options()
+
+    async def activate_index(self, index: int) -> None:
+        await self.app.run_action(self._options[index].action, self)
+
+    @on(events.Key)
+    async def on_key(self, event: events.Key) -> None:
+        for index, option in enumerate(self._options):
+            if event.key == option.key:
+                self.index = index
+                await self.activate_index(index)
+                break
+
+    @on(ListView.Selected)
+    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+        event.stop()
+        await self.activate_index(event.index)
