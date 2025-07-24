@@ -1,4 +1,5 @@
 from time import monotonic
+from typing import Callable
 
 from rich.segment import Segment
 from rich.style import Style as RichStyle
@@ -40,6 +41,7 @@ class ThrobberVisual(Visual):
 
     def render_strips(
         self,
+        get_style: Callable[[str | Style], Style],
         rules: RulesMap,
         width: int,
         height: int | None,

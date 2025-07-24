@@ -1,3 +1,4 @@
+import asyncio
 import llm
 from llm import Model
 
@@ -16,11 +17,15 @@ class AgentResponse(Markdown):
         self.model = model
         super().__init__(markdown)
 
+    async def _add_chunk(self, chunk: str) -> None:
+        await self.append(chunk)
+        await asyncio.sleep(0.01)
+
     @work(thread=True)
     def send_prompt(self, prompt: str) -> None:
         """Get the response in a thread."""
         self.post_message(messages.WorkStarted())
-        llm_response = self.model.prompt(prompt, system=SYSTEM)
+        llm_response = self.model.prompt(prompt)
         for chunk in llm_response:
-            self.app.call_from_thread(self.append, chunk)
+            self.app.call_from_thread(self._add_chunk, chunk)
         self.post_message(messages.WorkFinished())

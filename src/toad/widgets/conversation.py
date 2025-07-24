@@ -218,7 +218,17 @@ for n in range(10):
     print(n)
 """
 
-MD = ""
+MD = """
+1. Lists can be ordered
+2. Lists can be `unordered`
+   - I must not *fear*.
+     - Fear is the `mind-killer`.
+       - Fear is the little-death that brings total obliteration.
+         - I will face my fear.
+           - I will permit it to pass over me and through me.
+     - And when it has gone past, I will turn the inner eye to see its path.
+   - Where the fear has gone there will be nothing. Only I will remain.
+"""
 
 
 class Cursor(Static):
@@ -338,11 +348,10 @@ class Conversation(containers.Vertical):
     def watch_busy_count(self, busy: int) -> None:
         self.throbber.set_class(busy > 0, "-busy")
 
-    @work
     async def on_mount(self) -> None:
         self.screen.can_focus = False
-        await self.post(Welcome(), anchor=True)
-        agent_response = AgentResponse(MD)
+        await self.post(Welcome(), anchor=False)
+        agent_response = AgentResponse(self.llm_model, MD)
         await self.post(agent_response, anchor=True)
         chunk = 8
 
@@ -374,7 +383,7 @@ class Conversation(containers.Vertical):
 
         # self.notify(str(event.widget))
 
-    async def post(self, widget: Widget, anchor: bool = False) -> None:
+    async def post(self, widget: Widget, anchor: bool = True) -> None:
         self._blocks = None
         await self.contents.mount(widget)
         if anchor:

@@ -13,7 +13,7 @@ Conversation {
     height: 1fr;
     max-width: 100;    
     background: black 10%;
-    layers: base prompt float;    
+    layers: base prompt float;        
 
     # Prompt {
         
@@ -24,6 +24,10 @@ Conversation {
     #     }  
     # }
     
+    #contents {
+        width: 1fr;
+        overflow: hidden auto;     
+    }
     #contents > * {                        
         & > MarkdownBlock:last-child {
             margin-bottom: 0;     
@@ -51,6 +55,7 @@ Conversation {
 
 
 Welcome {
+    # height: 100%;
     height: auto;
     min-height: 100%;    
 
@@ -99,6 +104,8 @@ UserInput {
 AgentResponse {    
     # margin: 0;
     # padding: 0;
+    overflow-x: auto;
+    scrollbar-size-horizontal: 0;
 }
 
 MainScreen {
