@@ -42,8 +42,10 @@ class Menu(ListView, can_focus=True):
         color: $foreground;
         background: $panel-darken-1;
         border: solid $foreground;
+        constrain: inside inside;
    
-        & > MenuOption {                    
+        & > MenuOption {         
+            
             layout: horizontal;            
             width: 1fr;            
             padding: 0 1;

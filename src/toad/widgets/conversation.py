@@ -80,6 +80,8 @@ Draw a horizontal rule with three dashes (`---`).
 
 Good for natural breaks in the content, that don't require another header.
 
+[like this][example]
+
 ## Lists
 
 1. Lists can be ordered
@@ -92,6 +94,8 @@ Good for natural breaks in the content, that don't require another header.
      - And when it has gone past, I will turn the inner eye to see its path.
    - Where the fear has gone there will be nothing. Only I will remain.
 
+[example]: example.com
+   
 ### Longer list
 
 1. **Duke Leto I Atreides**, head of House Atreides
@@ -212,23 +216,23 @@ I would like to add controls to these widgets to export the table as CSV, which 
 # | `show_cursor`   | `bool` | `True`  | Show a cell cursor                 |
 # """
 
-MD = """
-```python
-for n in range(10):
-    print(n)
-"""
+# MD = """
+# ```python
+# for n in range(10):
+#     print(n)
+# """
 
-MD = """
-1. Lists can be ordered
-2. Lists can be `unordered`
-   - I must not *fear*.
-     - Fear is the `mind-killer`.
-       - Fear is the little-death that brings total obliteration.
-         - I will face my fear.
-           - I will permit it to pass over me and through me.
-     - And when it has gone past, I will turn the inner eye to see its path.
-   - Where the fear has gone there will be nothing. Only I will remain.
-"""
+# MD = """
+# 1. Lists can be ordered
+# 2. Lists can be `unordered`
+#    - I must not *fear*.
+#      - Fear is the `mind-killer`.
+#        - Fear is the little-death that brings total obliteration.
+#          - I will face my fear.
+#            - I will permit it to pass over me and through me.
+#      - And when it has gone past, I will turn the inner eye to see its path.
+#    - Where the fear has gone there will be nothing. Only I will remain.
+# """
 
 
 class Cursor(Static):
@@ -348,16 +352,20 @@ class Conversation(containers.Vertical):
     def watch_busy_count(self, busy: int) -> None:
         self.throbber.set_class(busy > 0, "-busy")
 
+    @work
     async def on_mount(self) -> None:
         self.screen.can_focus = False
         await self.post(Welcome(), anchor=False)
-        agent_response = AgentResponse(self.llm_model, MD)
+        agent_response = AgentResponse(self.llm_model)
         await self.post(agent_response, anchor=True)
         chunk = 8
 
-        # for position in range(0, len(MD), chunk):
-        #     await agent_response.append(MD[position : position + chunk])
-        #     await asyncio.sleep(0.01)
+        stream = AgentResponse.get_stream(agent_response)
+        try:
+            for position in range(0, len(MD), chunk):
+                await stream.write(MD[position : position + chunk])
+        finally:
+            await stream.stop()
 
     def on_click(self, event: events.Click) -> None:
         if event.widget is not None:
