@@ -101,34 +101,48 @@ class Prompt(containers.VerticalGroup):
         if auto_complete:
             self.auto_complete.set_options(auto_complete)
             self.auto_complete.action_cursor_down()
-            self.auto_complete.display = True
+            self.show_auto_complete(True)
         else:
-            self.auto_complete.display = False
+            self.show_auto_complete(False)
             self.auto_complete.clear_options()
 
     def set_auto_completes(self, auto_completes: list[Option] | None) -> None:
         self.auto_completes = auto_completes.copy() if auto_completes else []
 
     def show_auto_complete(self, show: bool) -> None:
+        if self.auto_complete.display == show:
+            return
+        if show:
+            self.update_auto_complete_location()
+        # cursor_offset = self.prompt_text_area.cursor_screen_offset + (-2, 1)
+        # self.auto_complete.styles.offset = cursor_offset
         self.auto_complete.display = show
+        if not show:
+            return
         cursor_row, cursor_column = self.prompt_text_area.selection.end
         line = self.prompt_text_area.document.get_line(cursor_row)
         post_cursor = line[cursor_column:]
         pre_cursor = line[:cursor_column]
         self.load_suggestions(pre_cursor, post_cursor)
 
+    def on_mount(self, event: events.Mount) -> None:
+        self.call_after_refresh(self.update_auto_complete_location)
+
     @on(MarkdownTextArea.CursorMove)
     def on_cursor_move(self, event: MarkdownTextArea.CursorMove) -> None:
         selection = event.selection
         if selection.end != selection.start:
-            self.auto_complete.display = False
+            self.show_auto_complete(False)
             return
 
-        self.show_auto_complete(self.prompt_text_area.cursor_at_end_of_line)
+        self.show_auto_complete(
+            self.prompt_text_area.cursor_at_end_of_line or not self.text
+        )
+        event.stop()
 
+    def update_auto_complete_location(self):
         cursor_offset = self.prompt_text_area.cursor_screen_offset + (-2, 1)
         self.auto_complete.styles.offset = cursor_offset
-        event.stop()
 
     @on(TextArea.Changed)
     def on_text_area_changed(self, event: TextArea.Changed) -> None:
@@ -185,11 +199,11 @@ class Prompt(containers.VerticalGroup):
 
     @on(events.DescendantBlur, "PromptTextArea")
     def on_descendant_blur(self, event: events.DescendantBlur) -> None:
-        self.auto_complete.display = False
+        self.auto_complete.visible = False
 
     @on(events.DescendantFocus, "PromptTextArea")
     def on_descendant_focus(self, event: events.DescendantFocus) -> None:
-        self.auto_complete.display = True
+        self.auto_complete.visible = True
 
     def compose(self) -> ComposeResult:
         yield PromptTextArea().data_bind(Prompt.auto_completes)
@@ -198,6 +212,6 @@ class Prompt(containers.VerticalGroup):
 
     def action_dismiss(self) -> None:
         if self.auto_complete.display:
-            self.auto_complete.display = False
+            self.show_auto_complete(False)
         else:
             raise SkipAction()
