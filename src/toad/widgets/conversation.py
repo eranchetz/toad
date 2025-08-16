@@ -542,15 +542,15 @@ class Conversation(containers.Vertical):
         for parent in widget.ancestors:
             if not isinstance(parent, Widget):
                 break
-            if parent is self or parent is contents:
+            if (parent is self or parent is contents) and widget in contents.children:
                 self.cursor_offset = contents.children.index(widget)
                 break
-            if isinstance(parent, BlockProtocol):
+            if isinstance(parent, BlockProtocol) and parent in contents.children:
                 self.cursor_offset = contents.children.index(parent)
                 parent.block_select(widget)
                 break
             widget = parent
-        self.refresh_block_cursor()
+        self.call_after_refresh(self.refresh_block_cursor)
         event.stop()
 
     async def post(self, widget: Widget, anchor: bool = True) -> None:
