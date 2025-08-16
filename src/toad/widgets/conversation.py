@@ -336,7 +336,7 @@ class Cursor(Static):
 
     def _update_follow(self) -> None:
         if self.follow_widget:
-            self.styles.height = max(1, self.follow_widget.size.height)
+            self.styles.height = max(1, self.follow_widget.outer_size.height)
             follow_y = (
                 self.follow_widget.virtual_region.y
                 + self.follow_widget.parent.virtual_region.y
@@ -429,6 +429,14 @@ class Conversation(containers.Vertical):
     def get_cursor_block[BlockType](
         self, block_type: type[BlockType]
     ) -> BlockType | None:
+        """Get the cursor block it it matches a type.
+
+        Args:
+            block_type: The expected type.
+
+        Returns:
+            _type_: The instance or `None` if not selected, or wrong type.
+        """
         cursor_block = self.cursor_block_child
         if isinstance(cursor_block, block_type):
             return cursor_block
@@ -670,17 +678,17 @@ class Conversation(containers.Vertical):
         menu.focus()
 
     def action_copy_to_clipboard(self) -> None:
-        if (block := self.cursor_block) is not None and block.source:
+        if (block := self.get_cursor_block(MarkdownBlock)) is not None and block.source:
             self.app.copy_to_clipboard(block.source)
             self.notify("Copied to clipboard")
 
     def action_copy_to_prompt(self) -> None:
-        if (block := self.cursor_block) is not None and block.source:
+        if (block := self.get_cursor_block(MarkdownBlock)) is not None and block.source:
             self.cursor_offset = -1
             self.prompt.append(block.source)
 
     def action_explain(self, topic: str | None = None) -> None:
-        if (block := self.cursor_block) is not None and block.source:
+        if (block := self.get_cursor_block(MarkdownBlock)) is not None and block.source:
             if topic:
                 PROMPT = f"Explain the purpose of '{topic}' in the following code:\n{block.source}"
             else:
@@ -688,7 +696,7 @@ class Conversation(containers.Vertical):
             self.screen.query_one(Explain).send_prompt(PROMPT)
 
     def action_run(self) -> None:
-        if (block := self.cursor_block) is not None and block.source:
+        if (block := self.get_cursor_block(MarkdownBlock)) is not None and block.source:
             assert isinstance(block, MarkdownFence)
             self.execute(block._content.plain, block.lexer)
 
@@ -739,7 +747,7 @@ class Conversation(containers.Vertical):
             self.window.focus()
             self.cursor.visible = True
             self.cursor.follow(cursor_block)
-            self.window.scroll_to_center(cursor_block)
+            self.call_after_refresh(self.window.scroll_to_center, cursor_block)
         else:
             self.cursor.visible = False
             self.cursor.follow(None)
