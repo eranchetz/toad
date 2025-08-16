@@ -27,7 +27,7 @@ import llm
 
 from toad import messages
 from toad.widgets.menu import Menu
-from toad.widgets.prompt import MarkdownTextArea, Prompt, AutoCompleteOptions
+from toad.widgets.prompt import HighlightedTextArea, Prompt, AutoCompleteOptions
 from toad.widgets.throbber import Throbber
 from toad.widgets.user_input import UserInput
 from toad.widgets.explain import Explain
@@ -438,7 +438,7 @@ class Conversation(containers.Vertical):
 
     @on(events.DescendantFocus)
     def on_descendant_focus(self, event: events.DescendantFocus):
-        if isinstance(event.widget, MarkdownTextArea):
+        if isinstance(event.widget, HighlightedTextArea):
             self.block_cursor = -1
 
     @on(events.DescendantBlur)

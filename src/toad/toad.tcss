@@ -241,10 +241,12 @@ AutoCompleteOptions {
     width: auto;
     overlay: screen;
     overflow: hidden;
-    constrain: inside inflect;    
+    constrain: inside inflect;
+    
     min-width: 12;    
     margin: 1 0;
-    height: auto;        
+    height: auto;
+        
     & > .option-list--option {
         padding: 0 1;
     }

@@ -5,6 +5,7 @@ from typing import Sequence
 from rich.text import Text
 
 from textual import on
+from textual.reactive import reactive
 from textual.content import Content
 from textual.highlight import highlight
 from textual.message import Message
@@ -12,7 +13,9 @@ from textual.widgets import TextArea
 from textual.widgets.text_area import Selection
 
 
-class MarkdownTextArea(TextArea):
+class HighlightedTextArea(TextArea):
+    highlight_language = reactive("markdown")
+
     @dataclass
     class CursorMove(Message):
         selection: Selection
@@ -57,10 +60,17 @@ class MarkdownTextArea(TextArea):
     @property
     def highlight_lines(self) -> Sequence[Content]:
         if self._highlight_lines is None:
-            content = highlight(self.text + "\n```", language="markdown")
-            content_lines = content.split("\n", allow_blank=True)[:-1]
-
-            self._highlight_lines = content_lines
+            language = self.highlight_language
+            if language == "markdown":
+                content = highlight(self.text + "\n```", language="markdown")
+                content_lines = content.split("\n", allow_blank=True)[:-1]
+                self._highlight_lines = content_lines
+            elif language == "shell":
+                content = highlight(self.text, language="sh")
+                content_lines = content.split("\n", allow_blank=True)
+                self._highlight_lines = content_lines
+            else:
+                raise ValueError("highlight_language must be `markdown` or `shell`")
         return self._highlight_lines
 
     @on(TextArea.Changed)

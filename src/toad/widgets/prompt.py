@@ -18,7 +18,7 @@ from textual.widgets.option_list import Option
 from textual import events
 
 
-from toad.widgets.markdown_textarea import MarkdownTextArea
+from toad.widgets.highlighted_textarea import HighlightedTextArea
 from toad.widgets.condensed_path import CondensedPath
 from toad.messages import UserInputSubmitted
 from toad.slash_command import SlashCommand
@@ -28,11 +28,16 @@ class AutoCompleteOptions(OptionList, can_focus=False):
     pass
 
 
-class PromptTextArea(MarkdownTextArea):
+class PromptTextArea(HighlightedTextArea):
     BINDING_GROUP_TITLE = "Prompt"
-    BINDINGS = [Binding("ctrl+j", "newline", "New line", key_display="⇧+enter")]
+    BINDINGS = [
+        Binding("enter", "submit", "Send", key_display="⏎", priority=True),
+        Binding("ctrl+j", "newline", "New line", key_display="⇧+⏎"),
+        Binding("ctrl+j", "multiline_submit", "Send", key_display="⇧+⏎"),
+    ]
 
     auto_completes: var[list[Option]] = var(list)
+    multi_line = var(False, bindings=True)
 
     class Submitted(Message):
         def __init__(self, markdown: str) -> None:
@@ -45,15 +50,25 @@ class PromptTextArea(MarkdownTextArea):
     def on_mount(self) -> None:
         self.highlight_cursor_line = False
 
-    def on_key(self, event: events.Key) -> None:
-        if event.key == "enter":
-            event.stop()
-            event.prevent_default()
-            self.post_message(UserInputSubmitted(self.text))
-            self.clear()
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
+        if action == "newline" and self.multi_line:
+            return False
+        if action == "submit" and self.multi_line:
+            return False
+        if action == "multiline_submit":
+            return self.multi_line
+        return True
+
+    def action_multiline_submit(self) -> None:
+        self.post_message(UserInputSubmitted(self.text))
+        self.clear()
 
     def action_newline(self) -> None:
         self.insert("\n")
+
+    def action_submit(self) -> None:
+        self.post_message(UserInputSubmitted(self.text))
+        self.clear()
 
     def action_cursor_up(self, select: bool = False):
         if self.auto_completes:
@@ -89,6 +104,7 @@ class Prompt(containers.VerticalGroup):
     auto_completes: var[list[Option]] = var(list)
     slash_commands: var[list[SlashCommand]] = var(list)
     shell_mode = var(False)
+    multi_line = var(False)
 
     @dataclass
     class AutoCompleteMove(Message):
@@ -111,19 +127,23 @@ class Prompt(containers.VerticalGroup):
     def text(self) -> str:
         return self.prompt_text_area.text
 
+    def watch_multiline(self) -> None:
+        self.update_prompt()
+
     def watch_shell_mode(self) -> None:
         self.update_prompt()
 
     def update_prompt(self):
-        if self.is_shell_mode:
+        if self.shell_mode:
             self.prompt_label.update(self.PROMPT_SHELL)
             self.add_class("-shell-mode")
             self.prompt_text_area.placeholder = Content.assemble(
                 "Enter shell command".expandtabs(8),
             )
+            self.prompt_text_area.highlight_language = "shell"
         else:
             self.prompt_label.update(
-                self.PROMPT_SHELL if self.likely_shell else self.PROMPT_AI
+                self.PROMPT_MULTILINE if self.multi_line else self.PROMPT_AI
             )
             self.remove_class("-shell-mode")
             self.prompt_text_area.placeholder = Content.assemble(
@@ -135,11 +155,12 @@ class Prompt(containers.VerticalGroup):
                 ("@", "r"),
                 " files",
             )
+            self.prompt_text_area.highlight_language = "markdown"
 
     @property
     def likely_shell(self) -> bool:
         text = self.prompt_text_area.text
-        if "\n" in text:
+        if "\n" in text or " " in text:
             return False
         if text.split(" ", 1)[0] in ("ls", "cat", "cd", "mv", "cp"):
             return True
@@ -150,10 +171,10 @@ class Prompt(containers.VerticalGroup):
         return self.shell_mode or self.likely_shell
 
     def focus(self) -> None:
-        self.query(MarkdownTextArea).focus()
+        self.query(HighlightedTextArea).focus()
 
     def append(self, text: str) -> None:
-        self.query_one(MarkdownTextArea).insert(text)
+        self.query_one(HighlightedTextArea).insert(text)
 
     def watch_auto_completes(self, auto_complete: list[Option]) -> None:
         if auto_complete:
@@ -187,8 +208,8 @@ class Prompt(containers.VerticalGroup):
     # def on_mount(self, event: events.Mount) -> None:
     #     self.call_after_refresh(self.update_auto_complete_location)
 
-    @on(MarkdownTextArea.CursorMove)
-    def on_cursor_move(self, event: MarkdownTextArea.CursorMove) -> None:
+    @on(HighlightedTextArea.CursorMove)
+    def on_cursor_move(self, event: HighlightedTextArea.CursorMove) -> None:
         selection = event.selection
         if selection.end != selection.start:
             self.show_auto_complete(False)
@@ -207,6 +228,11 @@ class Prompt(containers.VerticalGroup):
     @on(TextArea.Changed)
     def on_text_area_changed(self, event: TextArea.Changed) -> None:
         text = event.text_area.text
+
+        self.multi_line = "\n" in text or "```" in text
+
+        if not self.multi_line and self.likely_shell:
+            self.shell_mode = True
 
         if text.startswith(("!", "$")) and not self.shell_mode:
             self.shell_mode = True
@@ -282,7 +308,7 @@ class Prompt(containers.VerticalGroup):
     def compose(self) -> ComposeResult:
         with containers.HorizontalGroup(id="prompt-container"):
             yield Label(self.PROMPT_AI, id="prompt")
-            yield PromptTextArea().data_bind(Prompt.auto_completes)
+            yield PromptTextArea().data_bind(Prompt.auto_completes, Prompt.multi_line)
         with containers.HorizontalGroup(id="info-container"):
             yield CondensedPath()
 
