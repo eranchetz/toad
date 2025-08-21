@@ -71,6 +71,7 @@ class Shell:
         env["TOAD"] = "1"
 
         shell = f"{self.shell} +o interactive"
+        # shell = self.shell
 
         process = await asyncio.create_subprocess_shell(
             shell,
@@ -102,11 +103,11 @@ class Shell:
 
         unicode_decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
         try:
-            while data := await reader.read(1024 * 64):
+            while data := await reader.read(1024 * 1024):
+                # while data := await reader.readline():
                 line = unicode_decoder.decode(data)
                 if self.ansi_log is None:
                     self.ansi_log = await self.conversation.get_ansi_log(self.width)
-
                 self.ansi_log.write(line)
         finally:
             transport.close()
@@ -114,7 +115,7 @@ class Shell:
         line = unicode_decoder.decode(b"", final=True)
         if line:
             if self.ansi_log is None:
-                self.ansi_log = await self.conversation.get_ansi_log()
+                self.ansi_log = await self.conversation.get_ansi_log(self.width)
             self.ansi_log.write(line)
 
         await process.wait()

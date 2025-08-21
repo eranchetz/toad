@@ -29,6 +29,13 @@ SCHEMA: list[SchemaDict] = [
         "type": "object",
         "fields": [
             {
+                "key": "footer",
+                "title": "Enabled footer?",
+                "help": "Disable the footer if you want additional room.",
+                "type": "boolean",
+                "default": True,
+            },
+            {
                 "key": "column",
                 "title": "Enable column?",
                 "help": "Enable for a fixed column size. Disable to use the full screen width.",

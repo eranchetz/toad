@@ -13,6 +13,10 @@ Throbber {
     display: none;
 }
 
+App.-hide-footer Footer {
+    display: none;
+}
+
 Conversation {
     
     Window {
@@ -111,7 +115,7 @@ Conversation {
         padding: 0 1 0 0;
         margin: 1 0;
         overflow: scroll;
-        scrollbar-size: 0 0;        
+        scrollbar-size: 0 0;                
     }
 
     UserInput {

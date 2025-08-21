@@ -82,6 +82,7 @@ class ANSILog(ScrollView, can_focus=False):
         self.max_line_width = 0
         self.max_window_width = 0
         self._background_style = Style()
+        self._reflow_width: int | None = None
 
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
 
@@ -150,8 +151,10 @@ class ANSILog(ScrollView, can_focus=False):
         self._render_line_cache.clear()
 
     def on_resize(self) -> None:
+        if self._width != self._reflow_width:
+            self._reflow()
+            self._reflow_width = self._width
         self._clear_caches()
-        self._reflow()
 
     def clear(self) -> None:
         self._lines.clear()
@@ -266,9 +269,17 @@ class ANSILog(ScrollView, can_focus=False):
         self._folded_lines.extend(folds)
         self._update_virtual_size()
 
-    def update_line(self, line_index: int, line: Content) -> None:
+    def update_line(self, line_index: int, line: Content | None = None) -> None:
         while line_index >= len(self._lines):
             self.add_line(Content())
+
+        if line is None:
+            self._lines[line_index].updates += 1
+            line_no = self._line_to_fold[line_index]
+            self.refresh(
+                Region(0, line_no, self._width, len(self._folded_lines) - line_no)
+            )
+            return
 
         line_expanded_tabs = line.expand_tabs(8)
         self.max_line_width = max(line_expanded_tabs.cell_length, self.max_line_width)
@@ -295,7 +306,6 @@ class ANSILog(ScrollView, can_focus=False):
 
         self._update_virtual_size()
         self.refresh(Region(0, line_no, self._width, refresh_lines))
-        self.log(self._lines)
 
     def render_line(self, y: int) -> Strip:
         scroll_x, scroll_y = self.scroll_offset
@@ -394,6 +404,5 @@ if __name__ == "__main__":
                 ansi_log.write(line)
             line = unicode_decoder.decode(b"", final=True)
             ansi_log.write(line)
-            # self.call_later(self.exit)
 
     ANSIApp().run()

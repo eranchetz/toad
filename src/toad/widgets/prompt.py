@@ -237,7 +237,6 @@ class Prompt(containers.VerticalGroup):
         event.stop()
 
     def update_auto_complete_location(self):
-        return
         cursor_offset = self.prompt_text_area.cursor_screen_offset + (-2, 1)
         self.auto_complete.styles.offset = cursor_offset
 
