@@ -460,6 +460,7 @@ class Conversation(containers.Vertical):
     async def on_user_input_submitted(self, event: messages.UserInputSubmitted) -> None:
         if event.shell:
             await self.post_shell(event.body)
+            self.prompt.shell_mode = False
         elif event.body.strip():
             from toad.widgets.agent_response import AgentResponse
 

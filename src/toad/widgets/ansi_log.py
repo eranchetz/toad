@@ -154,7 +154,7 @@ class ANSILog(ScrollView, can_focus=False):
         if self._width != self._reflow_width:
             self._reflow()
             self._reflow_width = self._width
-        self._clear_caches()
+            self._clear_caches()
 
     def clear(self) -> None:
         self._lines.clear()
@@ -269,17 +269,10 @@ class ANSILog(ScrollView, can_focus=False):
         self._folded_lines.extend(folds)
         self._update_virtual_size()
 
-    def update_line(self, line_index: int, line: Content | None = None) -> None:
+    def update_line(self, line_index: int, line: Content) -> None:
+        line.simplify()
         while line_index >= len(self._lines):
             self.add_line(Content())
-
-        if line is None:
-            self._lines[line_index].updates += 1
-            line_no = self._line_to_fold[line_index]
-            self.refresh(
-                Region(0, line_no, self._width, len(self._folded_lines) - line_no)
-            )
-            return
 
         line_expanded_tabs = line.expand_tabs(8)
         self.max_line_width = max(line_expanded_tabs.cell_length, self.max_line_width)
@@ -299,12 +292,15 @@ class ANSILog(ScrollView, can_focus=False):
 
         for line_no in range(line_index, self.line_count):
             line_record = self._lines[line_no]
+            line_record.updates += 1
             self._line_to_fold.append(len(self._folded_lines))
             for fold in line_record.folds:
                 self._folded_lines.append(fold)
                 refresh_lines += 1
 
         self._update_virtual_size()
+
+        # self.refresh_lines(fold_line, refresh_lines)
         self.refresh(Region(0, line_no, self._width, refresh_lines))
 
     def render_line(self, y: int) -> Strip:
@@ -324,7 +320,7 @@ class ANSILog(ScrollView, can_focus=False):
             return Strip.blank(width, rich_style)
 
         unfolded_line = self._lines[line_no]
-        cache_key = (unfolded_line.updates, x, y, width, visual_style)
+        cache_key = (self.scroll_offset.y - y, unfolded_line.updates)
         if not selection:
             cached_strip = self._render_line_cache.get(cache_key)
             if cached_strip is not None:
@@ -341,11 +337,9 @@ class ANSILog(ScrollView, can_focus=False):
                 selection_style = self.screen.get_visual_style("screen--selection")
                 unfolded_content = unfolded_content.stylize(selection_style, start, end)
                 try:
-                    line = self._fold_line(
-                        line_no,
-                        unfolded_content,
-                        width,
-                    )[line_offset][-1]
+                    line = (
+                        self._fold_line(line_no, unfolded_content, width)[line_offset]
+                    ).content
                 except IndexError:
                     pass
 
