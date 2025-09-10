@@ -5,6 +5,10 @@ class SchemaDict(TypedDict, total=False):
     pass
 
 
+# ---------------------------------------------------------------------------------------
+# Types
+
+
 class FileSystemCapability(SchemaDict, total=False):
     readTextFile: bool
     writeTextFile: bool
@@ -35,10 +39,27 @@ class AuthMethod(SchemaDict, total=False):
     name: Required[str]
 
 
+# ---------------------------------------------------------------------------------------
+# RPC responses
+
+
 class InitializeResponse(SchemaDict, total=False):
     agentCapabilities: AgentCapabilities
     authMethods: list[AuthMethod]
     protocolVersion: Required[int]
+
+
+class NewSessionResponse(SchemaDict, total=False):
+    sessionId: Required[str]
+
+
+class SessionPromptResponse(SchemaDict, total=False):
+    stopReason: Required[
+        Literal["end_turn", "max_tokens", "max_turn_requests", "refusal", "cancelled"]
+    ]
+
+
+# ---------------------------------------------------------------------------------------
 
 
 class EnvVariable(SchemaDict, total=False):
@@ -52,10 +73,6 @@ class McpServer(SchemaDict, total=False):
     command: str
     env: list[EnvVariable]
     name: str
-
-
-class NewSessionResponse(SchemaDict, total=False):
-    sessionId: Required[str]
 
 
 # https://modelcontextprotocol.io/specification/2025-06-18/server/resources#annotations

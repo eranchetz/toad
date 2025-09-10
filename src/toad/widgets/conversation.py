@@ -505,13 +505,17 @@ class Conversation(containers.Vertical):
                 self.agent_response = agent_response
                 await self.post(agent_response, loading=True)
 
-                if self.agent is not None:
-                    await self.agent.send_prompt(text)
+                self.send_prompt_to_agent(text)
 
                 # agent_response.send_prompt(
                 #     event.body,
                 #     Path(self.prompt.current_directory.path).expanduser().absolute(),
                 # )
+
+    @work
+    async def send_prompt_to_agent(self, prompt: str) -> None:
+        if self.agent is not None:
+            await self.agent.send_prompt(prompt)
 
     @on(Menu.OptionSelected)
     async def on_menu_option_selected(self, event: Menu.OptionSelected) -> None:

@@ -25,6 +25,8 @@ def session_new(
 
 
 @API.method(name="prompt", prefix="session/")
-def session_prompt(prompt: list[protocol.ContentBlock], sessionId: str):
+def session_prompt(
+    prompt: list[protocol.ContentBlock], sessionId: str
+) -> protocol.SessionPromptResponse:
     """https://agentclientprotocol.com/protocol/prompt-turn#1-user-message"""
     ...

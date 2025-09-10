@@ -7,6 +7,7 @@ from logging import getLogger
 
 from textual.content import Content
 from textual.message_pump import MessagePump
+from textual import log
 
 from toad import jsonrpc
 from toad.agent import AgentBase
@@ -16,7 +17,6 @@ from toad.acp.api import API
 from toad.acp import messages
 from toad.acp.prompt import build as build_prompt
 
-log = getLogger("acp")
 
 PROTOCOL_VERSION = 1
 
@@ -88,6 +88,7 @@ class Agent(AgentBase):
 
         https://agentclientprotocol.com/protocol/schema
         """
+        log(update)
         message_target = self._message_target
         if message_target is None:
             return
@@ -102,6 +103,34 @@ class Agent(AgentBase):
                 "content": {"type": type, "text": text},
             }:
                 message_target.post_message(messages.ACPThinking())
+
+    @jsonrpc.expose("read_text_file", prefix="fs/")
+    def rpc_read_text_file(
+        self,
+        sessionId: str,
+        path: str,
+        line: int | None = None,
+        limit: int | None = None,
+    ) -> dict[str, str]:
+        """Read a file in the project."""
+        # TODO: what if the read is outside of the project path?
+        # https://agentclientprotocol.com/protocol/file-system#reading-files
+        read_path = self.project_root_path / path
+        text = read_path.read_text(encoding="utf-8", errors="replace")
+        if line is not None:
+            line = max(0, line - 1)
+            if limit is None:
+                text = "\n".join(text.splitlines()[line:])
+            else:
+                text = "\n".join(text.splitlines()[line : line + limit])
+        return {"content": text}
+
+    @jsonrpc.expose("write_text_file", prefix="fs/")
+    def rpc_write_text_file(self, sessionId: str, path: str, content: str) -> None:
+        # TODO: What if the agent wants to write outside of the project path?
+        # https://agentclientprotocol.com/protocol/file-system#writing-files
+        write_path = self.project_root_path / path
+        write_path.write_text(content)
 
     async def _run_agent(self) -> None:
         """Task to communicate with the agent subprocess."""
@@ -119,12 +148,16 @@ class Agent(AgentBase):
 
         assert process.stdout is not None
         assert process.stdin is not None
+        stdin = process.stdin
+
+        results = []
 
         async def handle_response_object(response: jsonrpc.JSONObject) -> None:
             if "result" in response or "error" in response:
                 API.process_response(response)
             elif "method" in response:
-                await self.server.call(response)
+                result = await self.server.call(response)
+                results.append(result)
 
         while line := await process.stdout.readline():
             # This line should contain JSON, which may be:
@@ -136,12 +169,22 @@ class Agent(AgentBase):
             except Exception:
                 # TODO: handle this
                 raise
+
             if isinstance(agent_data, dict):
                 await handle_response_object(agent_data)
             elif isinstance(agent_data, list):
                 for response_object in agent_data:
                     if isinstance(response_object, dict):
                         await handle_response_object(response_object)
+
+            if results:
+                try:
+                    json_result = json.dumps(
+                        results[0] if len(results) == 1 else results
+                    )
+                    stdin.write(b"%s\n" % json_result.encode("utf-8"))
+                finally:
+                    results.clear()
 
         print("exit")
 
@@ -195,9 +238,19 @@ class Agent(AgentBase):
         response = await session_new_response.wait()
         self.session_id = response["sessionId"]
 
-    async def acp_session_prompt(self, prompt: list[protocol.ContentBlock]) -> None:
+    async def acp_session_prompt(
+        self, prompt: list[protocol.ContentBlock]
+    ) -> str | None:
+        """Send the prompt to the agent.
+
+        Returns:
+            The stop reason.
+
+        """
         with self.request():
-            api.session_prompt(prompt, self.session_id)
+            session_prompt = api.session_prompt(prompt, self.session_id)
+        result = await session_prompt.wait()
+        return result.get("stopReason")
 
 
 if __name__ == "__main__":
