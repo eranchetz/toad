@@ -15,6 +15,7 @@ from textual.geometry import Size
 from textual import highlight
 from textual import events
 from textual.css.styles import RulesMap
+from textual.selection import Selection
 from textual.strip import Strip
 from textual.style import Style
 from textual.reactive import reactive, var
@@ -190,6 +191,19 @@ class DiffCode(Static):
         min-width: 1fr;
     }
     """
+
+    def allow_select(self) -> bool:
+        return True
+
+    def get_selection(self, selection: Selection) -> tuple[str, str] | None:
+        visual = self._render()
+        if isinstance(visual, LineContent):
+            text = "\n".join(
+                "" if line is None else line.plain for line in visual.code_lines
+            )
+        else:
+            return None
+        return selection.extract(text), "\n"
 
 
 def fill_lists[T](list_a: list[T], list_b: list[T], fill_value: T) -> None:
