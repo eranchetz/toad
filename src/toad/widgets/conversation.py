@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-
+from asyncio import Future
 from functools import cached_property
 from typing import TYPE_CHECKING
 from pathlib import Path
@@ -25,7 +25,7 @@ from textual.layout import WidgetPlacement
 
 import llm
 
-from toad import messages
+from toad import jsonrpc, messages
 from toad.acp import messages as acp_messages
 from toad.app import ToadApp
 from toad.acp import protocol as acp_protocol
@@ -435,6 +435,10 @@ class Conversation(containers.Vertical):
     _agent_response: var[AgentResponse | None] = var(None)
     _agent_thought: var[AgentThought | None] = var(None)
 
+    def __init__(self, project_path: Path) -> None:
+        super().__init__()
+        self.set_reactive(Conversation.project_path, project_path)
+
     def compose(self) -> ComposeResult:
         yield Throbber(id="throbber")
         with Window():
@@ -466,6 +470,11 @@ class Conversation(containers.Vertical):
     async def get_agent_thought(self) -> AgentThought:
         """Get or create an agent thought widget."""
         from toad.widgets.agent_thought import AgentThought
+
+        if self.contents.children and not isinstance(
+            self.contents.children[-1], AgentThought
+        ):
+            self._agent_thought = None
 
         if self._agent_thought is None:
             self._agent_thought = AgentThought("")
@@ -524,25 +533,18 @@ class Conversation(containers.Vertical):
                 await self.slash_command(text)
             else:
                 await self.post(UserInput(text))
-
-                # agent_response = AgentResponse(self.conversation)
-                # self.agent_response = agent_response
-                # await self.post(agent_response, loading=True)
                 await self.get_agent_thought()
-                # await self.get_agent_response()
                 self.send_prompt_to_agent(text)
-
-                # agent_response.send_prompt(
-                #     event.body,
-                #     Path(self.prompt.current_directory.path).expanduser().absolute(),
-                # )
 
     @work
     async def send_prompt_to_agent(self, prompt: str) -> None:
         if self.agent is not None:
+            stop_reason: str | None = None
             self.busy_count += 1
             try:
                 stop_reason = await self.agent.send_prompt(prompt)
+            except jsonrpc.APIError as error:
+                self.notify(error.message, title="Send prompt", severity="error")
             finally:
                 self.busy_count -= 1
             await self.agent_turn_over(stop_reason)
@@ -600,36 +602,121 @@ class Conversation(containers.Vertical):
     def watch_busy_count(self, busy: int) -> None:
         self.throbber.set_class(busy > 0, "-busy")
 
-    @on(acp_messages.ACPUpdate)
-    async def on_acp_agent_message(self, message: acp_messages.ACPUpdate):
+    @on(acp_messages.Update)
+    async def on_acp_agent_message(self, message: acp_messages.Update):
         message.stop()
         if self._agent_thought and self._agent_thought.loading:
             await self._agent_thought.remove()
         agent_response = await self.get_agent_response()
         await agent_response.append_fragment(message.text)
 
-    @on(acp_messages.ACPThinking)
-    async def on_acp_agent_thinking(self, message: acp_messages.ACPThinking):
+    @on(acp_messages.Thinking)
+    async def on_acp_agent_thinking(self, message: acp_messages.Thinking):
         message.stop()
         agent_thought = await self.get_agent_thought()
         await agent_thought.append_fragment(message.text)
 
-    @on(acp_messages.ACPRequestPermission)
-    async def on_acp_request_permission(
-        self, message: acp_messages.ACPRequestPermission
-    ):
+    @on(acp_messages.RequestPermission)
+    async def on_acp_request_permission(self, message: acp_messages.RequestPermission):
         message.stop()
-        await self.post_tool_call(message.tool_call)
-        self.ask(
-            [
-                Answer(
-                    option["name"],
-                    option["optionId"],
-                )
-                for option in message.options
-            ],
-            callback=message.result_future.set_result,
+        self.log(message)
+        options = [
+            Answer(
+                option["name"],
+                option["optionId"],
+            )
+            for option in message.options
+        ]
+        self.request_permissions(
+            message.result_future,
+            options,
+            message.tool_call,
         )
+
+        # await self.post_tool_call(message.tool_call)
+        # self.ask(
+        #     [
+        #         Answer(
+        #             option["name"],
+        #             option["optionId"],
+        #         )
+        #         for option in message.options
+        #     ],
+        #     callback=message.result_future.set_result,
+        # )
+
+    @on(acp_messages.ToolCallUpdate)
+    async def on_acp_tool_call_update(self, message: acp_messages.ToolCallUpdate):
+        print("TOOL CALL UPDATE")
+
+        if message.status in (None, "completed"):
+            self._agent_thought = None
+            self._agent_response = None
+
+        for content in message.content:
+            match content:
+                case {
+                    "type": content,
+                    "content": {
+                        "type": "text",
+                        "text": text,
+                    },
+                }:
+                    from toad.widgets.tool_call import ToolCall
+
+                    await self.post(ToolCall(text, markup=False))
+
+    @work
+    async def request_permissions(
+        self,
+        result_future: Future[Answer],
+        options: list[Answer],
+        tool_call_update: acp_protocol.ToolCallUpdate,
+    ) -> None:
+        kind = tool_call_update.get("kind")
+        if kind is None:
+            from toad.widgets.tool_call import ToolCall
+
+            if (contents := tool_call_update.get("content")) is None:
+                return
+            title = tool_call_update.get("title")
+            for content in contents:
+                match content:
+                    case {"type": "text", "content": {"text": text}}:
+                        await self.post(ToolCall(text))
+
+            def answer_callback(answer: Answer) -> None:
+                result_future.set_result(answer)
+
+            self.ask(options, title or "", answer_callback)
+            return
+
+        if kind == "edit":
+            from toad.screens.permissions import PermissionsScreen
+
+            async def populate(screen: PermissionsScreen) -> None:
+                if (contents := tool_call_update.get("content")) is None:
+                    return
+                for content in contents:
+                    match content:
+                        case {
+                            "type": "diff",
+                            "oldText": old_text,
+                            "newText": new_text,
+                            "path": path,
+                        }:
+                            await screen.add_diff(path, path, old_text, new_text)
+
+            permissions_screen = PermissionsScreen(options, populate_callback=populate)
+            result = await self.app.push_screen_wait(permissions_screen)
+            result_future.set_result(result)
+        elif kind == "execute":
+            title = tool_call_update.get("title", "") or ""
+
+            def answer_callback(answer: Answer) -> None:
+                result_future.set_result(answer)
+
+            self.ask(options, title, answer_callback)
 
     async def post_tool_call(
         self, tool_call_update: acp_protocol.ToolCallUpdate
@@ -692,13 +779,18 @@ class Conversation(containers.Vertical):
         ]
         self.call_after_refresh(self.post_welcome)
         self.app.settings_changed_signal.subscribe(self, self._settings_changed)
-        self.start_shell()
+        self.call_after_refresh(self.start_shell)
 
         if self.app.acp_command is not None:
-            from toad.acp.agent import Agent
 
-            self.agent = Agent(self.project_path, self.app.acp_command)
-            self.agent.start(self)
+            def start_agent():
+                from toad.acp.agent import Agent
+
+                assert self.app.acp_command is not None
+                self.agent = Agent(self.project_path, self.app.acp_command)
+                self.agent.start(self)
+
+            self.call_after_refresh(start_agent)
 
     @work
     async def start_shell(self) -> None:
@@ -716,6 +808,10 @@ class Conversation(containers.Vertical):
         # await self.post(Welcome(classes="note", name="welcome"), anchor=False)
         await self.post(
             Note(f"Settings read from [$text-success]'{self.app.settings_path}'"),
+            anchor=True,
+        )
+        await self.post(
+            Note(f"project directory is [$text-success]'{self.project_path!s}'"),
             anchor=True,
         )
 

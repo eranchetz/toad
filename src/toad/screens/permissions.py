@@ -1,3 +1,6 @@
+import asyncio
+
+from typing import Awaitable, Callable
 from textual import on
 from textual.app import ComposeResult
 from textual import containers
@@ -107,7 +110,7 @@ class ToolScroll(containers.VerticalScroll):
     BINDING_GROUP_TITLE = "Changes window"
 
 
-class PermissionsScreen(Screen[str]):
+class PermissionsScreen(Screen[Answer]):
     BINDING_GROUP_TITLE = "Permissions"
     AUTO_FOCUS = "Question"
     CSS_PATH = "permissions.tcss"
@@ -139,6 +142,19 @@ class PermissionsScreen(Screen[str]):
     navigator = getters.query_one("#navigator", OptionList)
     index: var[int] = var(0)
 
+    def __init__(
+        self,
+        options: list[Answer],
+        populate_callback: Callable[["PermissionsScreen"], Awaitable] | None,
+        *,
+        name: str | None = None,
+        id: str | None = None,
+        classes: str | None = None,
+    ):
+        super().__init__(name=name, id=id, classes=classes)
+        self.options = options
+        self.populate_callback = populate_callback
+
     def get_diff_type(self) -> str:
         app = self.app
         diff_type = "auto"
@@ -165,15 +181,7 @@ class PermissionsScreen(Screen[str]):
                 id="instructions",
             )
             with containers.Vertical(id="nav-container"):
-                yield PermissionsQuestion(
-                    "",
-                    options=[
-                        Answer("Allow once", "allow_once", kind="allow_once"),
-                        Answer("Allow always", "allow_always", kind="allow_always"),
-                        Answer("Reject once", "reject_once", kind="reject_once"),
-                        Answer("Reject always", "reject_always", kind="reject_always"),
-                    ],
-                )
+                yield PermissionsQuestion("", options=self.options)
                 yield ChangesOptionList(id="navigator")
             yield ToolScroll(id="tool-container")
 
@@ -184,9 +192,17 @@ class PermissionsScreen(Screen[str]):
         if isinstance(app, ToadApp):
             diff_view_setting = app.settings.get("diff.view", str)
             self.query_one("#diff-select", Select).value = diff_view_setting
-
-        await self.add_diff("foo.py", "foo.py", SOURCE1, SOURCE2)
         self.navigator.highlighted = 0
+
+        if self.populate_callback is not None:
+
+            async def run_populate():
+                if self.populate_callback is not None:
+                    await self.populate_callback(self)
+
+            asyncio.create_task(run_populate())
+
+        # await self.add_diff("foo.py", "foo.py", SOURCE1, SOURCE2)
 
     async def add_diff(
         self, path1: str, path2: str, before: str | None, after: str
@@ -211,7 +227,7 @@ class PermissionsScreen(Screen[str]):
     @on(Question.Answer)
     def on_question_answer(self, event: Question.Answer) -> None:
         def dismiss():
-            self.dismiss(event.answer.id)
+            self.dismiss(event.answer)
 
         self.set_timer(0.4, dismiss)
 

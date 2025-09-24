@@ -20,10 +20,6 @@ from toad import atomic
 
 class ToadApp(App):
     BINDING_GROUP_TITLE = "System"
-    BINDINGS = [
-        Binding("ctrl+t", "show_permissions", "Permissions screen test", priority=True)
-    ]
-
     CSS_PATH = "toad.tcss"
 
     _settings = var(dict)
@@ -31,7 +27,9 @@ class ToadApp(App):
     column_width: reactive[int] = reactive(100)
     scrollbar: reactive[str] = reactive("normal")
 
-    def __init__(self, acp_command: str | None = None) -> None:
+    def __init__(
+        self, acp_command: str | None = None, project_dir: str | None = None
+    ) -> None:
         """_summary_
 
         Args:
@@ -39,12 +37,8 @@ class ToadApp(App):
         """
         self.settings_changed_signal = Signal(self, "settings_changed")
         self.acp_command = acp_command
+        self.project_dir = project_dir
         super().__init__()
-
-    def action_show_permissions(self) -> None:
-        from toad.screens.permissions import PermissionsScreen
-
-        self.push_screen(PermissionsScreen())
 
     @property
     def config_path(self) -> Path:
@@ -121,4 +115,5 @@ class ToadApp(App):
             column=ToadApp.column,
             column_width=ToadApp.column_width,
             scrollbar=ToadApp.scrollbar,
+            project_path=Path(self.project_dir or "./").resolve().absolute(),
         )

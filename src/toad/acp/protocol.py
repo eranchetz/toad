@@ -109,6 +109,7 @@ class ResourceLinkContent(SchemaDict, total=False):
     uri: Required[str]
 
 
+# https://agentclientprotocol.com/protocol/schema#contentblock
 type ContentBlock = (
     TextContent
     | ImageContent
@@ -202,6 +203,7 @@ class ToolCallUpdate(SchemaDict, total=False):
     locations: list | None
     rawInput: dict
     rawOutput: dict
+    # sessionUpdate: Required[Literal["tool_call_update"]]
     status: ToolCallStatus | None
     title: str | None
     toolCallId: Required[ToolCallId]

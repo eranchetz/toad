@@ -52,8 +52,8 @@ class PromptTextArea(HighlightedTextArea):
 
     BINDINGS = [
         Binding("enter", "submit", "Send", key_display="⏎", priority=True),
-        Binding("ctrl+j", "newline", "New line", key_display="⇧+⏎"),
-        Binding("ctrl+j", "multiline_submit", "Send", key_display="⇧+⏎"),
+        Binding("ctrl+j,shift+enter", "newline", "New line", key_display="⇧+⏎"),
+        Binding("ctrl+j,shift+enter", "multiline_submit", "Send", key_display="⇧+⏎"),
     ]
 
     auto_completes: var[list[Option]] = var(list)
@@ -462,7 +462,7 @@ class Prompt(containers.VerticalGroup):
                 )
         with containers.HorizontalGroup(id="info-container"):
             yield AgentInfo()
-            yield CondensedPath()
+            yield CondensedPath().data_bind(path=Prompt.project_path)
 
     def action_dismiss(self) -> None:
         if self.shell_mode:

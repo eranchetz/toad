@@ -84,8 +84,9 @@ class JSONRPCError(Exception):
         self.message = message
         self.id = id
         self.code = code if code is not None else self.CODE
+        super().__init__(message)
 
-    def __rich_repr__(self) -> repr.repr.Result:
+    def __rich_repr__(self) -> rich.repr.Result:
         yield self.message
         yield "id", self.id
         yield "code", self.code
@@ -110,6 +111,7 @@ class InternalError(JSONRPCError):
 class APIError(Exception):
     def __init__(self, code: int, message: str, data: JSONType) -> None:
         self.code = code
+        self.message = message
         self.data = data
         if data is None:
             super().__init__(f"{message} ({code})")

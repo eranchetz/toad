@@ -7,24 +7,30 @@ from toad.answer import Answer
 from toad.acp import protocol
 
 
-class ACPAgentMessage(Message):
+class AgentMessage(Message):
     pass
 
 
 @dataclass
-class ACPThinking(ACPAgentMessage):
+class Thinking(AgentMessage):
     type: str
     text: str
 
 
 @dataclass
-class ACPUpdate(ACPAgentMessage):
+class Update(AgentMessage):
     type: str
     text: str
 
 
 @dataclass
-class ACPRequestPermission(ACPAgentMessage):
+class RequestPermission(AgentMessage):
     options: list[protocol.PermissionOption]
     tool_call: protocol.ToolCallUpdate
     result_future: Future[Answer]
+
+
+@dataclass
+class ToolCallUpdate(AgentMessage):
+    status: str | None
+    content: list[protocol.ToolCallContent]

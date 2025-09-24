@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -32,6 +34,7 @@ class MainScreen(Screen, can_focus=False):
     column_width = reactive(100)
     scrollbar = reactive("")
     show_tree = reactive(False, toggle_class="-show-tree")
+    project_path: var[Path] = var(Path("./").expanduser().absolute())
 
     def compose(self) -> ComposeResult:
         yield Version("Toad v0.1")
@@ -39,7 +42,7 @@ class MainScreen(Screen, can_focus=False):
         with containers.Center():
             yield DirectoryTree("./")
             yield Explain()
-            yield Conversation()
+            yield Conversation(self.project_path).data_bind(MainScreen.project_path)
         yield Footer()
 
     def on_mount(self) -> None:

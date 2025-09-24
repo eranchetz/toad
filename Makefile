@@ -1,10 +1,14 @@
 
-run := uv run toad
+run := TEXTUAL=devtools uv run toad
 
 .PHONY: run
 run:
 	$(run)
 
-.PHONY: acp
-acp:
+.PHONY: gemini-acp
+gemini-acp:
 	$(run) acp "gemini --experimental-acp"
+
+.PHONY: claude-acp
+claude-acp:
+	$(run) acp "claude-code-acp"

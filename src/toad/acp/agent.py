@@ -102,12 +102,20 @@ class Agent(AgentBase):
                 "sessionUpdate": "agent_message_chunk",
                 "content": {"type": type, "text": text},
             }:
-                message_target.post_message(messages.ACPUpdate(type, text))
+                message_target.post_message(messages.Update(type, text))
             case {
                 "sessionUpdate": "agent_thought_chunk",
                 "content": {"type": type, "text": text},
             }:
-                message_target.post_message(messages.ACPThinking(type, text))
+                message_target.post_message(messages.Thinking(type, text))
+            case {
+                "sessionUpdate": "tool_call_update",
+                "status": status,
+                "content": content,
+            }:
+                message_target.post_message(
+                    messages.ToolCallUpdate(status, content or [])
+                )
 
     @jsonrpc.expose("session/request_permission")
     async def rpc_request_permission(
@@ -131,7 +139,7 @@ class Agent(AgentBase):
         assert self._message_target is not None
         result_future: asyncio.Future[Answer] = asyncio.Future()
         self._message_target.post_message(
-            messages.ACPRequestPermission(options, toolCall, result_future)
+            messages.RequestPermission(options, toolCall, result_future)
         )
         await result_future
         ask_result = result_future.result()
@@ -189,6 +197,7 @@ class Agent(AgentBase):
             stdout=PIPE,
             stderr=PIPE,
             env=os.environ,
+            cwd=str(self.project_root_path),
         )
 
         self._task = asyncio.create_task(self.run())
@@ -217,7 +226,7 @@ class Agent(AgentBase):
             agent_output.writelines([line])
             try:
                 agent_data = json.loads(line.decode("utf-8"))
-                print("IN", agent_data)
+                log(agent_data)
             except Exception:
                 # TODO: handle this
                 raise
@@ -237,7 +246,7 @@ class Agent(AgentBase):
 
             # By this point we know it is a JSON RPC call
             print("JSONRPC CALL")
-            print(agent_data)
+            log(agent_data)
             tasks.add(asyncio.create_task(call_jsonrpc(agent_data)))
 
         print("exit")

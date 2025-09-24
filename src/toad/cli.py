@@ -14,8 +14,9 @@ def main(ctx):
 
 @main.command("acp")
 @click.argument("command", metavar="COMMAND")
-def acp(command: str):
-    app = ToadApp(acp_command=command)
+@click.option("--project-dir", metavar="PATH", default=None)
+def acp(command: str, project_dir: str | None) -> None:
+    app = ToadApp(acp_command=command, project_dir=project_dir)
     app.run()
 
 

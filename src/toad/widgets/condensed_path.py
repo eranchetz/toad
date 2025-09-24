@@ -60,10 +60,11 @@ class CondensedPath(Static):
 
     def watch_path(self, path: str) -> None:
         path = os.path.abspath(path)
+        self.tooltip = path
         user_root = os.path.expanduser("~/")
         if path.startswith(user_root):
             path = "~/" + path[len(user_root) :]
-        self.tooltip = path
+
         if self.is_mounted:
             condensed_path = Content(condense_path(path, self.size.width))
             self.update(condensed_path)
