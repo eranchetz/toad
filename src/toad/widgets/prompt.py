@@ -26,6 +26,7 @@ from toad import messages
 from toad.widgets.highlighted_textarea import HighlightedTextArea
 from toad.widgets.condensed_path import CondensedPath
 from toad.widgets.path_search import PathSearch
+from toad.widgets.plan import Plan
 from toad.widgets.question import Ask, Question
 from toad.messages import UserInputSubmitted
 from toad.slash_command import SlashCommand
@@ -65,12 +66,24 @@ class PromptTextArea(HighlightedTextArea):
             self.markdown = markdown
             super().__init__()
 
+    class RequestShellMode(Message):
+        pass
+
     class CancelShell(Message):
         pass
 
     def on_mount(self) -> None:
         self.highlight_cursor_line = False
         self.hide_suggestion_on_blur = False
+
+    def on_key(self, event: events.Key) -> None:
+        if (
+            not self.shell_mode
+            and self.cursor_location == (0, 0)
+            and event.character in {"!", "$"}
+        ):
+            self.post_message(self.RequestShellMode())
+            event.prevent_default()
 
     def update_suggestion(self) -> None:
         if self.selection.start == self.selection.end and self.text.startswith("/"):
@@ -170,6 +183,7 @@ class Prompt(containers.VerticalGroup):
     project_path = var(lambda: Path("~/").expanduser().absolute())
     agent_info = var(Content(""))
     ask: var[Ask | None] = var(None)
+    plan: var[list[Plan.Entry]]
 
     @dataclass
     class AutoCompleteMove(Message):
@@ -297,15 +311,6 @@ class Prompt(containers.VerticalGroup):
             self.prompt_text_area.suggestion = ""
             return
 
-        # cursor_row, cursor_column = self.prompt_text_area.selection.end
-        # line = self.prompt_text_area.document.get_line(cursor_row)
-        # post_cursor = line[cursor_column:]
-        # pre_cursor = line[:cursor_column]
-        # self.load_suggestions(pre_cursor, post_cursor)
-
-    # def on_mount(self, event: events.Mount) -> None:
-    #     self.call_after_refresh(self.path_search.load_paths, Path("./"))
-
     @on(HighlightedTextArea.CursorMove)
     def on_cursor_move(self, event: HighlightedTextArea.CursorMove) -> None:
         selection = event.selection
@@ -324,6 +329,11 @@ class Prompt(containers.VerticalGroup):
             cursor_offset = (self.prompt_text_area.cursor_screen_offset) + (-2, 0)
             self.auto_complete.absolute_offset = cursor_offset
 
+    @on(PromptTextArea.RequestShellMode)
+    def on_request_shell_mode(self, event: PromptTextArea.RequestShellMode):
+        self.shell_mode = True
+        self.update_prompt()
+
     @on(TextArea.Changed)
     def on_text_area_changed(self, event: TextArea.Changed) -> None:
         text = event.text_area.text
@@ -332,12 +342,6 @@ class Prompt(containers.VerticalGroup):
 
         if not self.multi_line and self.likely_shell:
             self.shell_mode = True
-
-        if text.startswith(("!", "$")) and not self.shell_mode:
-            self.shell_mode = True
-            event.text_area.load_text(text[1:])
-            self.update_prompt()
-            return
 
         self.update_prompt()
         cursor_row, cursor_column = self.prompt_text_area.selection.end
@@ -452,6 +456,7 @@ class Prompt(containers.VerticalGroup):
     def compose(self) -> ComposeResult:
         yield AutoCompleteOptions()
         yield PathSearch().data_bind(root=Prompt.project_path)
+
         with containers.HorizontalGroup(id="prompt-container"):
             yield Question()
             with containers.HorizontalGroup(id="text-prompt"):
@@ -461,6 +466,7 @@ class Prompt(containers.VerticalGroup):
                     multi_line=Prompt.multi_line,
                     shell_mode=Prompt.shell_mode,
                 )
+
         with containers.HorizontalGroup(id="info-container"):
             yield AgentInfo()
             yield CondensedPath().data_bind(path=Prompt.project_path)
