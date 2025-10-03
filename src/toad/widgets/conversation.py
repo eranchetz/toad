@@ -834,7 +834,7 @@ class Conversation(containers.Vertical):
         contents = self.contents
         if self.screen.get_selected_text():
             return
-        if widget is None:
+        if widget is None or widget.is_maximized:
             return
         if widget in contents.displayed_children:
             self.cursor_offset = contents.displayed_children.index(widget)
@@ -970,6 +970,9 @@ class Conversation(containers.Vertical):
             MenuItem("Open as S[u]V[/]G", "export_to_svg", "v"),
         ]
 
+        if block.allow_maximize:
+            menu_options.append(MenuItem("[u]M[/u]aximize", "maximize_block", "m"))
+
         if isinstance(block, MenuProtocol):
             menu_options.extend(block.get_block_menu())
             menu = Menu(block, menu_options)
@@ -1036,6 +1039,11 @@ class Conversation(containers.Vertical):
         if text:
             self.prompt.append(text)
             self.focus_prompt()
+
+    def action_maximize_block(self) -> None:
+        if (block := self.get_cursor_block()) is not None:
+            self.screen.maximize(block, container=False)
+            block.focus()
 
     def action_export_to_svg(self) -> None:
         block = self.get_cursor_block()
@@ -1116,7 +1124,9 @@ class Conversation(containers.Vertical):
             self.window.focus()
             self.cursor.visible = True
             self.cursor.follow(cursor_block)
-            self.call_after_refresh(self.window.scroll_to_center, cursor_block)
+            self.call_after_refresh(
+                self.window.scroll_to_center, cursor_block, immediate=True
+            )
         else:
             self.cursor.visible = False
             self.window.anchor(False)

@@ -113,7 +113,7 @@ Conversation {
         height: auto;                                          
     }    
 
-    ContentsGrid {                
+    ContentsGrid {            
         grid-size: 2;
         grid-columns: 1 1fr;
         grid-rows: auto;
@@ -162,16 +162,31 @@ Conversation {
         MarkdownBlock:last-child {
             margin-bottom: 0;
         }
-        
+
+       
         &.-loading {            
             background: transparent !important;
             padding: 0;
             margin: 0;            
-        }    
+        }
+        max-height: 10;
+        overflow-y: auto;
+        scrollbar-visibility: hidden;
+        # scrollbar-size: 0 0;
+
+        &.-maximized {
+            max-height: 100h;
+            margin: 1 2;
+            scrollbar-visibility: visible;
+            &>* {
+                
+                padding-right: 1;
+            }
+        }
     }
 
     ShellResult {        
-        border-left: wide $primary;
+        border-left: blank $primary;
         background: $foreground 4%;        
         padding: 1 0;   
         margin: 1 1 1 0; 
@@ -193,7 +208,7 @@ Conversation {
     }
     
     UserInput {
-        border-left: wide $secondary;
+        border-left: blank $secondary;
         background: $secondary 15%;
         padding: 1 1 1 0;   
         margin: 1 1 1 0; 

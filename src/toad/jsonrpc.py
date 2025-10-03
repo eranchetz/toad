@@ -16,6 +16,7 @@ import rich.repr
 from typing import Callable, ParamSpec, TypeVar
 from typeguard import check_type, CollectionCheckStrategy, TypeCheckError
 
+import textual
 
 type MethodType = Callable
 type JSONValue = str | int | float | bool | None
@@ -125,10 +126,13 @@ class Server:
 
     async def call(self, json: JSONObject | JSONList) -> JSONType:
         if isinstance(json, dict):
+            # Single call
             response = await self._dispatch_object(json)
         else:
+            # Batch call
             response = await self._dispatch_batch(json)
         log.debug(f"OUT {response}")
+        textual.log(response)
         return response
 
     def expose_instance(self, instance: object) -> None:

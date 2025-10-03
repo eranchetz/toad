@@ -137,6 +137,45 @@ class Agent(AgentBase):
                 else:
                     log.warning(f"Unknown tool call id in update; {update}")
 
+    '''
+    {
+        'jsonrpc': '2.0',
+        'id': 1,
+        'method': 'session/request_permission',
+        'params': {
+            'sessionId': '6506cc77-3c25-4b39-8a01-0aea0045d046',
+            'options': [
+                {'optionId': 'proceed_always', 'name': 'Allow All Edits', 'kind': 'allow_always'},
+                {'optionId': 'proceed_once', 'name': 'Allow', 'kind': 'allow_once'},
+                {'optionId': 'cancel', 'name': 'Reject', 'kind': 'reject_once'}
+            ],
+            'toolCall': {
+                'toolCallId': 'write_file-1759479269516',
+                'status': 'pending',
+                'title': 'Writing to mandelbrot.py',
+                'content': [
+                    {
+                        'type': 'diff',
+                        'path': 'mandelbrot.py',
+                        'oldText': '',
+                        'newText': 'import os\n\n\ndef get_terminal_size():\n    """Get the size of the terminal."""\n    try:\n
+    return os.get_terminal_size()\n    except OSError:\n        return 80, 24\n\n\ndef mandelbrot(c, max_iter):\n
+    """Determine if a point is in the Mandelbrot set."""\n    z = 0\n    n = 0\n    while abs(z) <= 2 and n < max_iter:\n
+    z = z * z + c\n        n += 1\n    return n\n\n\ndef draw_mandelbrot():\n    """Draw the Mandelbrot set in the
+    terminal."""\n    width, height = get_terminal_size()\n    x_min, x_max = -2.0, 1.0\n    y_min, y_max = -1.0, 1.0\n
+    max_iter = 256\n\n    chars = " .,-%*#@ "\n\n    for py in range(height):\n        line = ""\n        for px in
+    range(width):\n            x = x_min + (x_max - x_min) * px / width\n            y = y_min + (y_max - y_min) * py / height\n
+    c = complex(x, y)\n            m = mandelbrot(c, max_iter)\n            char_index = (m * (len(chars) - 1)) // max_iter\n
+    line += chars[char_index]\n        print(line)\n\n\nif __name__ == "__main__":\n    draw_mandelbrot()\n'
+                    }
+                ],
+                'locations': [{'path': '/Users/willmcgugan/sandbox/mandelbrot.py'}],
+                'kind': 'edit'
+            }
+        }
+    }
+    '''
+
     @jsonrpc.expose("session/request_permission")
     async def rpc_request_permission(
         self,
@@ -165,20 +204,23 @@ class Agent(AgentBase):
 
         if tool_call_id not in self.tool_calls:
             permission_tool_call = toolCall
-            permission_tool_call.pop("sessionUpdate")
+            permission_tool_call.pop("sessionUpdate", None)
             tool_call = cast(protocol.ToolCall, permission_tool_call)
             self.tool_calls[tool_call_id] = tool_call
 
-        if kind is None and tool_call_id in self.tool_calls:
-            permission_tool_call = self.tool_calls[tool_call_id]
-            self.tool_calls[tool_call_id] = permission_tool_call
+        log(self.tool_calls)
 
-            permission_tool_call.pop("sessionUpdate")
-            toolCall = cast(
-                protocol.ToolCallUpdatePermissionRequest,
-                permission_tool_call,
-            )
+        # if kind is None and tool_call_id in self.tool_calls:
+        #     permission_tool_call = self.tool_calls[tool_call_id]
+        #     self.tool_calls[tool_call_id] = permission_tool_call
 
+        #     permission_tool_call.pop("sessionUpdate")
+        #     toolCall = cast(
+        #         protocol.ToolCallUpdatePermissionRequest,
+        #         permission_tool_call,
+        #     )
+
+        print("Post RequestPermission")
         self._message_target.post_message(
             messages.RequestPermission(options, toolCall, result_future)
         )

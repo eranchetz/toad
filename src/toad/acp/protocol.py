@@ -137,7 +137,7 @@ class AgentThoughtChunk(SchemaDict, total=False):
 
 class ToolCallContentContent(SchemaDict, total=False):
     content: Required[ContentBlock]
-    type: Required[str]
+    type: Required[Literal["content"]]
 
 
 # https://agentclientprotocol.com/protocol/schema#param-diff
@@ -145,12 +145,12 @@ class ToolCallContentDiff(SchemaDict, total=False):
     newText: Required[str]
     oldText: str | None
     path: Required[str]
-    type: Required[str]
+    type: Required[Literal["diff"]]
 
 
 class ToolCallContentTerminal(SchemaDict, total=False):
     terminalId: Required[str]
-    type: Required[str]
+    type: Required[Literal["terminal"]]
 
 
 # https://agentclientprotocol.com/protocol/schema#toolcallcontent

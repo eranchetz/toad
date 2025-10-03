@@ -36,6 +36,7 @@ QUOTES = [
 class ToadApp(App):
     BINDING_GROUP_TITLE = "System"
     CSS_PATH = "toad.tcss"
+    ALLOW_IN_MAXIMIZED_VIEW = ""
 
     _settings = var(dict)
     column: reactive[bool] = reactive(False)
