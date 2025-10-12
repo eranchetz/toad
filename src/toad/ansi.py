@@ -487,13 +487,25 @@ ANSI_CLEAR: Mapping[int, ClearType] = {
 
 @rich.repr.auto
 class ANSISegment(NamedTuple):
+    """Represents a single operation on the ANSI output.
+
+    All values may be `None` meaning "not set".
+    """
+
     delta_x: int | None = None
+    """Relative x change."""
     delta_y: int | None = None
+    """Relative y change."""
     absolute_x: int | None = None
+    """Replace x."""
     absolute_y: int | None = None
+    """Replace y."""
     content: Content | None = None
+    """New content."""
     replace: tuple[int | None, int | None] | None = None
+    """Replace range (slice like)."""
     clear: ClearType | None = None
+    """Type of clear operation."""
 
     def __rich_repr__(self) -> rich.repr.Result:
         yield "delta_x", self.delta_x, None
@@ -600,7 +612,7 @@ class ANSIStream:
         Returns:
             Ansi segment, or `None` if one couldn't be decoded.
         """
-        if match := re.match(r"\x1b\[(\d+)?(?:;)?(\d*)?(\w)", csi):
+        if match := re.fullmatch(r"\x1b\[(\d+)?(?:;)?(\d*)?(\w)", csi):
             match match.groups():
                 case [lines, "", "A"]:
                     return ANSISegment(delta_y=-int(lines or 1))
