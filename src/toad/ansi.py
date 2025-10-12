@@ -592,6 +592,14 @@ class ANSIStream:
     @classmethod
     @lru_cache(maxsize=1024)
     def _parse_csi(cls, csi: str) -> ANSISegment | None:
+        """Parse CSI sequence in to an ansi segment.
+
+        Args:
+            csi: CSI sequence.
+
+        Returns:
+            Ansi segment, or `None` if one couldn't be decoded.
+        """
         if match := re.match(r"\x1b\[(\d+)?(?:;)?(\d*)?(\w)", csi):
             match match.groups():
                 case [lines, "", "A"]:
@@ -610,8 +618,7 @@ class ANSIStream:
                     return ANSISegment(absolute_x=+int(cells or 1))
                 case [row, column, "H"]:
                     return ANSISegment(
-                        absolute_x=int(column or 1) - 1,
-                        absolute_y=int(row or 1) - 1,
+                        absolute_x=int(column or 1) - 1, absolute_y=int(row or 1) - 1
                     )
                 case ["0" | "", "", "J"]:
                     return cls.CLEAR_SCREEN_CURSOR_TO_END
@@ -630,7 +637,6 @@ class ANSIStream:
         return None
 
     def on_token(self, token: ANSIToken) -> Iterable[ANSISegment]:
-        # print(token)
         match token:
             case Separator(separator):
                 yield self.ANSI_SEPARATORS[separator]
@@ -653,8 +659,8 @@ class ANSIStream:
                         yield ansi_segment
 
             case ANSIToken(text):
-                if self.style:
-                    content = Content.styled(text, self.style)
+                if style := self.style:
+                    content = Content.styled(text, style)
                 else:
                     content = Content(text)
                 yield ANSISegment(delta_x=len(content), content=content)
