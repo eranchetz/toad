@@ -217,11 +217,9 @@ class ANSILog(ScrollView, can_focus=False):
             folded_line = folded_lines[self.cursor_line]
             previous_content = folded_line.content
             line = self._lines[folded_line.line_no]
-            if delta_y:
+            if delta_y or absolute_y:
                 # If we are moving the cursor, simplify the line (reduce segments)
-                line = self._lines[folded_line.line_no] = LineRecord(
-                    line.content.simplify(), line.folds, line.updates
-                )
+                line.content.simplify()
 
             if content is not None:
                 cursor_line_offset = self.cursor_line_offset
