@@ -59,8 +59,7 @@ class Loading(Static):
     DEFAULT_CLASSES = "block"
     DEFAULT_CSS = """
     Loading {
-        height: auto;
-        
+        height: auto;        
     }
     """
 
@@ -547,6 +546,20 @@ class Conversation(containers.Vertical):
             return_code, signal = await terminal.wait_for_exit()
             message.result_future.set_result((return_code or 0, signal))
 
+    def set_mode(self, mode_id: str) -> bool:
+        """Set the mode give its id (if it exists).
+
+        Args:
+            mode_id: Id of mode.
+
+        Returns:
+            `True` if the mode was changed, `False` if it didn't exist.
+        """
+        if (mode := self.modes.get(mode_id)) is not None:
+            self.current_mode = mode
+            return True
+        return False
+
     @on(acp_messages.SetModes)
     async def on_acp_set_modes(self, message: acp_messages.SetModes):
         self.modes = message.modes
@@ -815,7 +828,7 @@ class Conversation(containers.Vertical):
         self.call_after_refresh(
             self.shell.send,
             command,
-            self.scrollable_content_region.width - 5,
+            self.scrollable_content_region.width - 6,
             self.window.scrollable_content_region.height - 2,
         )
 

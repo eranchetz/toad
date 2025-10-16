@@ -1,8 +1,10 @@
+from functools import partial
 from pathlib import Path
 
 from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.command import Hit, Hits, Provider, DiscoveryHit
 from textual.screen import Screen
 from textual.reactive import var, reactive
 from textual import getters
@@ -16,9 +18,45 @@ from toad.widgets.explain import Explain
 from toad.widgets.version import Version
 
 
+class ModeProvider(Provider):
+    async def search(self, query: str) -> Hits:
+        """Search for Python files."""
+        matcher = self.matcher(query)
+
+        screen = self.screen
+        assert isinstance(screen, MainScreen)
+
+        for mode in sorted(
+            screen.conversation.modes.values(), key=lambda mode: mode.name
+        ):
+            command = mode.name
+            score = matcher.match(command)
+            if score > 0:
+                yield Hit(
+                    score,
+                    matcher.highlight(command),
+                    partial(screen.conversation.set_mode, mode.id),
+                    help=mode.description,
+                )
+
+    async def discover(self) -> Hits:
+        screen = self.screen
+        assert isinstance(screen, MainScreen)
+
+        for mode in sorted(
+            screen.conversation.modes.values(), key=lambda mode: mode.name
+        ):
+            yield DiscoveryHit(
+                mode.name,
+                partial(screen.conversation.set_mode, mode.id),
+                help=mode.description,
+            )
+
+
 class MainScreen(Screen, can_focus=False):
     AUTO_FOCUS = "Conversation Prompt TextArea"
 
+    COMMANDS = {ModeProvider}
     BINDINGS = [
         Binding("f3", "show_files", "Files"),
         Binding("f3", "hide_files", "Hide files"),
