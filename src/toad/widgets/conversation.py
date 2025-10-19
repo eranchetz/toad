@@ -322,6 +322,10 @@ class Conversation(containers.Vertical):
                 self.notify(error, title="Set Mode", severity="error")
             elif (new_mode := self.modes.get(event.mode_id)) is not None:
                 self.current_mode = new_mode
+                self.flash(
+                    Content.from_markup("Mode changed to [b]$mode", mode=new_mode.name),
+                    style="success",
+                )
 
     @on(acp_messages.ModeUpdate)
     def on_mode_update(self, event: acp_messages.ModeUpdate) -> None:
@@ -1075,9 +1079,7 @@ class Conversation(containers.Vertical):
 
     @work
     async def action_settings(self) -> None:
-        from toad.screens.settings import SettingsScreen
-
-        await self.app.push_screen_wait(SettingsScreen())
+        await self.app.push_screen_wait("settings")
         self.app.save_settings()
 
     async def action_mode_switcher(self) -> None:

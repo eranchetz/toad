@@ -13,6 +13,11 @@ gemini-acp:
 claude-acp:
 	$(run) acp "claude-code-acp" --project-dir ~/sandbox
 
+
+.PHONE: codex-acp
+codex-acp:
+	$(run) acp "codex-acp"  --project-dir ~/sandbox
+
 .PHONY: replay
 replay:
 	ACP_INITIALIZE=0 $(run) acp "$(run) replay $(realpath replay.jsonl)" --project-dir ~/sandbox

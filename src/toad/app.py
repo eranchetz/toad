@@ -145,7 +145,15 @@ QUOTES = [
 ]
 
 
+def get_settings_screen():
+    from toad.screens.settings import SettingsScreen
+
+    return SettingsScreen()
+
+
 class ToadApp(App):
+    SCREENS = {"settings": get_settings_screen}
+
     BINDING_GROUP_TITLE = "System"
     CSS_PATH = "toad.tcss"
     ALLOW_IN_MAXIMIZED_VIEW = ""

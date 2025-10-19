@@ -162,9 +162,6 @@ class SettingsScreen(ModalScreen):
 
         yield Footer()
 
-    def on_mount(self) -> None:
-        self.query_one("#search").focus(scroll_visible=False)
-
     @on(Input.Blurred, "Input")
     @on(Input.Submitted, "Input")
     def on_input_blurred(self, event: Input.Blurred) -> None:
@@ -217,6 +214,6 @@ class SettingsScreen(ModalScreen):
     def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
         if action == "focus":
             if not self.is_mounted:
-                return False
-            return False if self.search_input.has_focus else True
+                return None
+            return None if self.search_input.has_focus else True
         return True
