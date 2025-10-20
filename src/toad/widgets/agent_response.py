@@ -20,8 +20,7 @@ When asked for a table do not wrap it in a code fence.
 class AgentResponse(Markdown):
     block_cursor_offset = var(-1)
 
-    def __init__(self, conversation: Conversation, markdown: str | None = None) -> None:
-        self.conversation = conversation
+    def __init__(self, markdown: str | None = None) -> None:
         super().__init__(markdown)
         self._stream: MarkdownStream | None = None
 
@@ -80,37 +79,3 @@ class AgentResponse(Markdown):
     async def append_fragment(self, fragment: str) -> None:
         self.loading = False
         await self.stream.write(fragment)
-
-    @work
-    async def send_prompt(self, prompt: str, project_path: Path) -> None:
-        stream = Markdown.get_stream(self)
-        try:
-            await self._send_prompt(stream, prompt, project_path).wait()
-        finally:
-            await stream.stop()
-
-    @work(thread=True)
-    def _send_prompt(
-        self, stream: MarkdownStream, prompt: str, project_path: Path
-    ) -> None:
-        """Get the response in a thread."""
-
-        # attachments = [
-        #     Attachment(
-        #         path=str(project_path / path[1:]),
-        #         type="text",
-        #     )
-        #     for path, _, _ in extract_paths_from_prompt(prompt)
-        # ]
-
-        attachments = []
-
-        self.post_message(messages.WorkStarted())
-        try:
-            llm_response = self.conversation.prompt(
-                prompt, system=SYSTEM, attachments=attachments
-            )
-            for chunk in llm_response:
-                self.app.call_from_thread(self.append_fragment, stream, chunk)
-        finally:
-            self.post_message(messages.WorkFinished())

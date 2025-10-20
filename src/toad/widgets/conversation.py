@@ -243,9 +243,7 @@ class Conversation(containers.Vertical):
         from toad.widgets.agent_response import AgentResponse
 
         if self._agent_response is None:
-            self._agent_response = agent_response = AgentResponse(
-                self.conversation, fragment
-            )
+            self._agent_response = agent_response = AgentResponse(fragment)
             await self.post(agent_response)
         else:
             await self._agent_response.append_fragment(fragment)
@@ -760,8 +758,8 @@ class Conversation(containers.Vertical):
 
     def _settings_changed(self, setting_item: tuple[str, str]) -> None:
         key, value = setting_item
-        if key == "llm.model":
-            self.conversation = llm.get_model(value).conversation()
+        # if key == "llm.model":
+        #     self.conversation = llm.get_model(value).conversation()
 
     @work
     async def post_welcome(self) -> None:

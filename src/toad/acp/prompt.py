@@ -22,8 +22,7 @@ def build(project_path: Path, prompt: str) -> list[protocol.ContentBlock]:
     for path, _, _ in extract_paths_from_prompt(prompt):
         try:
             resource = load_resource(project_path, Path(path))
-        except ResourceError as error:
-            raise
+        except ResourceError:
             # TODO: How should this be handled?
             continue
         uri = f"file://{resource.path.absolute().resolve()}"
