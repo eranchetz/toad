@@ -53,7 +53,7 @@ Conversation {
         layout: stream;
         margin: 0;                
         scrollbar-size-vertical: 2;        
-        padding: 0 1 1 1;       
+        padding: 0 1 0 1;       
         height: 1fr;                
         # align: left bottom;
     }
@@ -440,7 +440,7 @@ ModeSwitcher {
     min-width: 12;    
     margin: 1 0;
     height: auto;     
-        
+    
     & > .option-list--option {
         padding: 0 1;
     }
@@ -473,14 +473,13 @@ MainScreen {
         dock: left;
         padding: 0 2;
     }
-    &.-show-tree {
+    &.-show-tree {layer: float;
         DirectoryTree {
             display: block;
         }
     }
 
 }
-
 
 
 Version {

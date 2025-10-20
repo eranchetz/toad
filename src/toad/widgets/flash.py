@@ -18,11 +18,11 @@ class Flash(Static):
         background: $success 10%;
         color: $text-success;
         text-align: center;
-        display: none;
+        visibility: hidden;
         text-wrap: nowrap;
         text-overflow: ellipsis;     
-        overlay: screen;
-        offset-y: -1;   
+        # overlay: screen;
+        # offset-y: -1;   
 
         &.-default {
             background: $primary 10%;
@@ -65,16 +65,16 @@ class Flash(Static):
         """
         if self.flash_timer is not None:
             self.flash_timer.stop()
-        self.display = False
+        self.visible = False
 
         def hide() -> None:
             """Hide the content after a while."""
-            self.display = False
+            self.visible = False
 
         self.update(content)
         self.remove_class("-default", "-success", "-warning", "-error", update=False)
         self.add_class(f"-{style}")
-        self.display = True
+        self.visible = True
 
         if duration is None:
             duration = self.app.settings.get("ui.flash_duration", float)

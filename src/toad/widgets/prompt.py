@@ -275,7 +275,7 @@ class Prompt(containers.VerticalGroup):
         self.set_class(mode is not None, "-has-mode")
         if mode is not None:
             tooltip = Content.from_markup(
-                "[b]$description[/]\n\n(click to open mode switcher)",
+                "[b]$description[/]\n\n[dim](click to open mode switcher)",
                 description=mode.description,
             )
             self.query_one(ModeInfo).with_tooltip(tooltip).update(mode.name)
