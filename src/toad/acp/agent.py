@@ -142,6 +142,9 @@ class Agent(AgentBase):
                 self.tool_calls[tool_call_id] = update
                 self.post_message(messages.ToolCall(update))
 
+            case {"sessionUpdate": "plan", "entries": entries}:
+                self.post_message(messages.Plan(entries))
+
             case {
                 "sessionUpdate": "tool_call_update",
                 "toolCallId": tool_call_id,

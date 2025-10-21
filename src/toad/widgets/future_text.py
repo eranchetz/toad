@@ -59,6 +59,8 @@ class FutureText(Static):
         self.set_interval(1 / 60, self._update_text)
 
     def _update_text(self) -> None:
+        if not self.screen.is_active:
+            return
         text = self.text + " "
         speed_time = self.time * self.speed
         progress, fractional_progress = divmod(speed_time, 1)

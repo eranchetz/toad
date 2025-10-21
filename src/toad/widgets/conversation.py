@@ -534,7 +534,7 @@ class Conversation(containers.Vertical):
             message.env or {},
             message.cwd or str(self.project_path),
         )
-        width = self.scrollable_content_region.width - 5
+        width = self.window.size.width - 5 - self.window.styles.scrollbar_size_vertical
         height = self.window.scrollable_content_region.height - 2
 
         terminal = Terminal(
@@ -892,9 +892,6 @@ class Conversation(containers.Vertical):
             self._shell.start()
         return self._shell
 
-    async def _shell_send(self, command: str, width: int, height: int) -> None:
-        await self.shell.send(command, width, height)
-
     async def post_shell(self, command: str) -> None:
         from toad.widgets.shell_result import ShellResult
 
@@ -903,7 +900,7 @@ class Conversation(containers.Vertical):
         self.call_after_refresh(
             self.shell.send,
             command,
-            self.window.size.width - 3 - self.window.styles.scrollbar_size_vertical,
+            self.window.size.width - 2 - self.window.styles.scrollbar_size_vertical,
             self.window.scrollable_content_region.height - 2,
         )
 
