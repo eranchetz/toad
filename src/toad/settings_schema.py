@@ -122,14 +122,14 @@ SCHEMA: list[SchemaDict] = [
                 "key": "macos",
                 "title": "Shell command (macOS)",
                 "type": "string",
-                "help": "The command used to launch your shell on macOS.\n⚠️You may have to restart toad for this change to take effect.",
+                "help": "The command used to launch your shell on macOS.\n[bold]Note:[/] Require restart.",
                 "default": 'PS1="" ${SHELL:-/bin/sh} +o interactive',
             },
             {
                 "key": "linux",
                 "title": "Shell command (Linux)",
                 "type": "string",
-                "help": "The command used to launch your shell on Linux.\n⚠️You may have to restart toad for this change to take effect.",
+                "help": "The command used to launch your shell on Linux.\n[bold]Note:[/] Requires restart.",
                 "default": 'PS1="" ${SHELL:-/bin/sh}',
             },
             {
