@@ -271,13 +271,13 @@ class Conversation(containers.Vertical):
             return True if (self.agent and self.turn == "agent") else None
         if action in {"expand_block", "collapse_block"}:
             if (cursor_block := self.cursor_block) is None:
-                return None
+                return False
             elif isinstance(cursor_block, ExpandProtocol):
                 if action == "expand_block":
-                    return None if cursor_block.is_block_expanded() else True
+                    return False if cursor_block.is_block_expanded() else True
                 else:
-                    return True if cursor_block.is_block_expanded() else None
-            return None
+                    return True if cursor_block.is_block_expanded() else False
+            return None if action == "expand_block" else False
 
         return True
 
@@ -285,12 +285,14 @@ class Conversation(containers.Vertical):
         if (cursor_block := self.cursor_block) is not None:
             if isinstance(cursor_block, ExpandProtocol):
                 cursor_block.expand_block()
+                self.refresh_bindings()
                 self.call_after_refresh(self.cursor.follow, cursor_block)
 
     async def action_collapse_block(self) -> None:
         if (cursor_block := self.cursor_block) is not None:
             if isinstance(cursor_block, ExpandProtocol):
                 cursor_block.collapse_block()
+                self.refresh_bindings()
                 self.call_after_refresh(self.cursor.follow, cursor_block)
 
     async def post_agent_response(self, fragment: str = "") -> AgentResponse:
