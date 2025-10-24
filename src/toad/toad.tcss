@@ -206,12 +206,12 @@ Conversation {
     }
 
     ToolCall {                        
-        margin: 1 0 1 0 !important;   # Special case because the tall border reduces the apparent width           
+        margin: 1 1 1 0 !important;   # Special case because the tall border reduces the apparent width           
         padding: 0 0 0 1;
         layout: vertical;
 
         ToolCallHeader {
-            width: auto !important;            
+            width: auto;            
         }
     }
 
