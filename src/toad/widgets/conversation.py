@@ -1200,4 +1200,9 @@ class Conversation(containers.Vertical):
             from toad import about
             from toad.widgets.markdown_note import MarkdownNote
 
-            await self.post(MarkdownNote(about.render(self.app), classes="about"))
+            about_md = about.render(self.app)
+            await self.post(MarkdownNote(about_md, classes="about"))
+            self.app.copy_to_clipboard(about_md)
+            self.notify(
+                "A copy of /about has been placed in your clipboard", title="About"
+            )

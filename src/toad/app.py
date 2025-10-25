@@ -16,6 +16,7 @@ from textual.widget import Widget
 
 from toad.settings import Schema, Settings
 from toad.settings_schema import SCHEMA
+from toad import paths
 
 from toad import atomic
 
@@ -216,14 +217,11 @@ class ToadApp(App):
 
     @property
     def config_path(self) -> Path:
-        path = Path(
-            platformdirs.user_config_dir("toad", "textualize", ensure_exists=True)
-        )
-        return path
+        return paths.get_config()
 
     @property
     def settings_path(self) -> Path:
-        return Path("~/.toad.json").expanduser().absolute()
+        return paths.get_config() / "toad.json"
 
     @cached_property
     def settings_schema(self) -> Schema:
@@ -279,7 +277,7 @@ class ToadApp(App):
             settings_path.write_text(
                 json.dumps(settings, indent=4, separators=(", ", ": ")), "utf-8"
             )
-            self.notify(f"Wrote default settings to {settings_path}")
+            self.notify(f"Wrote default settings to {settings_path}", title="Settings")
         self.ansi_theme_dark = DRACULA_TERMINAL_THEME
         self._settings = settings
         self.settings.set_all()

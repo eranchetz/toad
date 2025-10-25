@@ -13,18 +13,31 @@ ABOUT_TEMPLATE = Template("""\
 © Will McGugan.
                           
 Toad is licensed under the terms of the [GNU AFFERO GENERAL PUBLIC LICENSE](https://www.gnu.org/licenses/agpl-3.0.txt).
-                          
-settings: `$SETTINGS_PATH`
+
+
+## Config
+
+config read from `$SETTINGS_PATH`
+                                       
+```json
+$CONFIG                       
+```
+
+## System
 
 | System | Version |
 | --- | --- |
 | Python | $PYTHON |
 | OS | $PLATFORM |
-                                                 
+
+## Dependencies
+
 | Library | Version |
 | --- | --- | 
 | Textual | ${TEXTUAL_VERSION} |
 | Rich | ${RICH_VERSION} |
+                          
+## Environment
 
 | Environment variable | Value |                
 | --- | --- |
@@ -42,6 +55,11 @@ def render(app: ToadApp) -> str:
         Markdown string.
     """
 
+    try:
+        config: str | None = app.settings_path.read_text()
+    except Exception:
+        config = None
+
     template_data = {
         "TOAD_VERSION": version("toad"),
         "TEXTUAL_VERSION": version("textual"),
@@ -53,6 +71,7 @@ def render(app: ToadApp) -> str:
         "TERM_PROGRAM": os.environ.get("TERM_PROGRAM", ""),
         "TERM_PROGRAM_VERSION": os.environ.get("TERM_PROGRAM_VERSION", ""),
         "SETTINGS_PATH": str(app.settings_path),
+        "CONFIG": config,
     }
     return ABOUT_TEMPLATE.safe_substitute(template_data)
 

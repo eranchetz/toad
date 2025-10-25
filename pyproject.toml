@@ -15,6 +15,7 @@ dependencies = [
     "platformdirs>=4.3.8",
     "rich",
     "typeguard>=4.4.4",
+    "xdg-base-dirs>=6.0.2",
 ]
 
 [tool.uv.workspace]
