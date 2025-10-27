@@ -86,7 +86,7 @@ class PathComplete:
         if not (prefix := longest_common_prefix(matching_nodes)):
             return None
 
-        return prefix
+        return prefix[len(path) :]
 
 
 if __name__ == "__main__":
