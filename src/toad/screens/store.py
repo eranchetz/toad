@@ -1,6 +1,8 @@
 from importlib.metadata import version
+from itertools import zip_longest
 
 from textual.binding import Binding
+from textual.color import Color
 from textual.screen import Screen
 from textual import work
 from textual import getters
@@ -59,6 +61,8 @@ class AgentItem(containers.VerticalGroup):
 class Launcher(containers.VerticalGroup):
     app = getters.app(ToadApp)
 
+    DIGITS = "123456789ABCDEF"
+
     def __init__(
         self,
         agents: dict[str, Agent],
@@ -75,12 +79,13 @@ class Launcher(containers.VerticalGroup):
             self.app.settings.get("launcher.agents", str).splitlines()
         )
         agents = self._agents
-        yield widgets.Static("Launcher", classes="heading")
 
         if launcher_set:
-            with GridSelect(id="launcher", min_column_width=40):
-                for identity in launcher_set:
-                    yield LauncherItem(agents[identity])
+            with GridSelect(id="launcher", min_column_width=40, max_column_width=40):
+                for digit, identity in zip_longest(self.DIGITS, launcher_set):
+                    if identity is None:
+                        break
+                    yield LauncherItem(digit or "", agents[identity])
         else:
             yield widgets.Label("Chose your fighter below!", classes="instruction-text")
 
@@ -88,7 +93,8 @@ class Launcher(containers.VerticalGroup):
 class LauncherItem(containers.VerticalGroup):
     """An entry in the Agent grid select."""
 
-    def __init__(self, agent: Agent) -> None:
+    def __init__(self, digit: str, agent: Agent) -> None:
+        self._digit = digit
         self._agent = agent
         super().__init__()
 
@@ -98,9 +104,13 @@ class LauncherItem(containers.VerticalGroup):
 
     def compose(self) -> ComposeResult:
         agent = self._agent
-        yield widgets.Label(agent["name"], id="name")
-        yield widgets.Label(agent["author_name"], id="author")
-        yield widgets.Static(agent["description"], id="description")
+        with containers.HorizontalGroup():
+            if self._digit:
+                yield widgets.Digits(self._digit)
+            with containers.VerticalGroup():
+                yield widgets.Label(agent["name"], id="name")
+                yield widgets.Label(agent["author_name"], id="author")
+                yield widgets.Static(agent["description"], id="description")
 
 
 class StoreScreen(Screen):

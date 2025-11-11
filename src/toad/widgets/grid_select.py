@@ -40,12 +40,14 @@ class GridSelect(containers.ItemGrid, can_focus=True):
         id: str | None = None,
         classes: str | None = None,
         min_column_width: int = 30,
+        max_column_width: int | None = None,
     ):
         super().__init__(
             name=name,
             id=id,
             classes=classes,
             min_column_width=min_column_width,
+            max_column_width=max_column_width,
         )
 
     @property

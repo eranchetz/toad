@@ -83,15 +83,31 @@ StoreScreen {
             color: $text-secondary;
         }
     }
+    Launcher {
+        GridSelect {
+            width: 1fr;            
+        }
+    }
+
     LauncherItem {
+        # width: 40;
+        # max-width: 40;        
         height: auto;               
         border: tall transparent;
         padding: 0 1;
         &:hover {
             background: $panel;
         }
+        Digits {
+            width: auto;
+            padding: 0 1 0 0;
+            color: $text-success;
+            # text-style: bold;
+        }
         #description {
             text-style: dim;
+            text-wrap: nowrap;
+            text-overflow: ellipsis;
         }
         #author {
             text-style: italic;
