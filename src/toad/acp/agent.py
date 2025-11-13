@@ -14,6 +14,8 @@ from textual.message_pump import MessagePump
 from textual import log
 
 from toad import jsonrpc
+import toad
+from toad.agent_schema import Agent as AgentData
 from toad.agent import AgentBase, AgentReady, AgentFail
 from toad.acp import protocol
 from toad.acp import api
@@ -38,7 +40,7 @@ class Mode(NamedTuple):
 class Agent(AgentBase):
     """An agent that speaks the APC (https://agentclientprotocol.com/overview/introduction) protocol."""
 
-    def __init__(self, project_root: Path, command: str) -> None:
+    def __init__(self, project_root: Path, agent: AgentData) -> None:
         """
 
         Args:
@@ -47,6 +49,7 @@ class Agent(AgentBase):
         """
         super().__init__(project_root)
 
+        self._agent_data = agent
         self.command = command
 
         self.server = jsonrpc.Server()
@@ -72,12 +75,18 @@ class Agent(AgentBase):
 
         self._terminal_count: int = 0
 
+    @property
+    def command(self) -> str | None:
+        acp_command = toad.get_os_matrix(self._agent_data["run_command"]))
+        return acp_command            
+
     def __rich_repr__(self) -> rich.repr.Result:
         yield self.project_root_path
         yield self.command
 
     def get_info(self) -> Content:
-        return Content(self.command)
+        agent_name = self._agent_data["name"]
+        return Content(agent_name)
 
     def start(self, message_target: MessagePump | None = None) -> None:
         """Start the agent."""
@@ -356,9 +365,17 @@ class Agent(AgentBase):
         env = os.environ.copy()
         env["TOAD_CWD"] = str(Path("./").absolute())
 
+        if (command:=self.command) is None:
+            self.post_message(
+                AgentFail(
+                    "Failed to start agent; no run command for this OS"                    
+                )
+            )
+            return
+
         try:
             process = self._process = await asyncio.create_subprocess_shell(
-                self.command,
+                command,
                 stdin=PIPE,
                 stdout=PIPE,
                 stderr=PIPE,
@@ -471,8 +488,13 @@ class Agent(AgentBase):
                         "readTextFile": True,
                         "writeTextFile": True,
                     },
-                    "terminal": True,
+                    "terminal": True,                    
                 },
+                {
+                    "name": toad.NAME,
+                    "title": toad.TITLE,
+                    "version": toad.get_version()
+                }
             )
 
         response = await initialize_response.wait()

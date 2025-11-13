@@ -9,9 +9,8 @@ I'm looking for early feedback, and potential collaboration in the future (if yo
 I am particularly interested in your feedback on usability right now.
 This class of apps is so new, I think there is plenty of room for innovation.
 
-Please use the Discussions tab for your feedback.
+Please use the Discussions tab for your feedback and bug reports.
 Avoid issues and PRs for now, unless we've agreed on them in the Discussions tab.
-I am working quite fast, and chances are I am aware of most of the issues.
 
 Toad is very much a work in progress.
 See [notes.md](https://github.com/Textualize/toad/blob/main/notes.md) for details about what to expect.
@@ -47,7 +46,8 @@ Here's a tongue-in-check write up on my blog: https://willmcgugan.github.io/anno
 Please **do** talk about Toad!
 Generating a buzz ahead of the first open release will be very beneficial.
 
-You may share your thoughts on social media in addition to screenshots and videos (but obviously no code from this repository). please use the hashtag `#toadai`.
+You may share your thoughts on social media in addition to screenshots and videos (but obviously no code from this repository).
+Please [tag me](https://github.com/willmcgugan) in your posts.
 
 I intend to release a first public version when there is enough core functionality.
 Progress has been good. So I would expect a release in December.
@@ -119,6 +119,7 @@ Thanks for being a part of this!
 See you in discussions.
 
 I'm also in the #toad channel on the [Textualize discord server](https://discord.gg/Enf6Z3qhVr).
+
 
 
 

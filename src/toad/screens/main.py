@@ -16,6 +16,7 @@ from textual.widget import Widget
 
 
 from toad.app import ToadApp
+from toad.agent_schema import Agent
 from toad.acp import messages as acp_messages
 from toad.widgets.plan import Plan
 from toad.widgets.throbber import Throbber
@@ -80,10 +81,10 @@ class MainScreen(Screen, can_focus=False):
 
     app = getters.app(ToadApp)
 
-    def __init__(self, project_path: Path, acp_command: str | None = None) -> None:
+    def __init__(self, project_path: Path, agent: Agent | None = None) -> None:
         super().__init__()
         self.set_reactive(MainScreen.project_path, project_path)
-        self._acp_command = acp_command
+        self._agent = agent
 
     def get_loading_widget(self) -> Widget:
         throbber = self.app.settings.get("ui.throbber", str)
@@ -110,7 +111,7 @@ class MainScreen(Screen, can_focus=False):
                     flex=True,
                 ),
             )
-            yield Conversation(self.project_path, self._acp_command).data_bind(
+            yield Conversation(self.project_path, self._agent).data_bind(
                 MainScreen.project_path
             )
         yield Footer()

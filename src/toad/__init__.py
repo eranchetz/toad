@@ -1,6 +1,9 @@
 from typing import Literal, Mapping
 import platform
 
+NAME = "toad"
+TITLE = "Toad by Will McGugan"
+
 type OS = Literal["linux", "macos", "windows", "*"]
 
 _system = platform.system()
@@ -24,3 +27,14 @@ def get_os_matrix(matrix: Mapping[OS, str]) -> str | None:
     if (result := matrix.get(os)) is None:
         result = matrix.get("*")
     return result
+
+
+def get_version() -> str:
+    """Get the current version of Toad.
+
+    Returns:
+        str: Version string, e.g "1.2.3"
+    """
+    from importlib.metadata import version
+
+    return version("toad")

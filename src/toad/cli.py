@@ -55,6 +55,13 @@ def acp(
     else:
         app.run()
 
+    from rich import print
+
+    print("")
+    print("[bold magenta]Thanks for trying out Toad!")
+    print("Please head to Discussions to share your experiences (good or bad).")
+    print("https://github.com/Textualize/toad/discussions")
+
 
 @main.command("settings")
 def settings() -> None:

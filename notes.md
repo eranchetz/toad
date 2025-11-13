@@ -22,5 +22,3 @@ I'm using this file to keep track of what works in Toad and what doesn't.
 - File tree doesn't do much
 - Some odd output in shell on Linux (working on a fix)
 - Chat bots have been temporarily disabled
-- No shell history
-- No shell auto-complete

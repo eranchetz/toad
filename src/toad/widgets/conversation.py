@@ -29,8 +29,10 @@ from textual.layouts.grid import GridLayout
 from textual.layout import WidgetPlacement
 
 
+import toad
 from toad import jsonrpc, messages
 from toad import paths
+from toad.agent_schema import Agent as AgentData
 from toad.acp import messages as acp_messages
 from toad.app import ToadApp
 from toad.acp import protocol as acp_protocol
@@ -219,7 +221,7 @@ class Conversation(containers.Vertical):
     current_mode: var[Mode | None] = var(None)
     turn: var[Literal["agent", "client"] | None] = var(None, bindings=True)
 
-    def __init__(self, project_path: Path, acp_command: str | None = None) -> None:
+    def __init__(self, project_path: Path, agent: AgentData | None = None) -> None:
         super().__init__()
 
         project_path = project_path.resolve().absolute()
@@ -235,7 +237,7 @@ class Conversation(containers.Vertical):
         self._agent_thought: AgentThought | None = None
         self._ansi_log: ANSILog | None = None
         self._last_escape_time: float = monotonic()
-        self._acp_command = acp_command
+        self._agent_data = agent
 
         self.project_data_path = paths.get_project_data(project_path)
         self.shell_history = History(self.project_data_path / "shell_history.jsonl")
@@ -452,13 +454,13 @@ class Conversation(containers.Vertical):
         elif text := event.body.strip():
             await self.prompt_history.append(event.body)
             self.prompt_history_index = 0
-            if text.startswith("/"):
-                await self.slash_command(text)
-            else:
-                await self.post(UserInput(text))
-                self._loading = await self.post(Loading("Please wait..."), loading=True)
-                await asyncio.sleep(0)
-                self.send_prompt_to_agent(text)
+            if text.startswith("/") and await self.slash_command(text):
+                # Toad has processes the slash command.
+                return
+            await self.post(UserInput(text))
+            self._loading = await self.post(Loading("Please wait..."), loading=True)
+            await asyncio.sleep(0)
+            self.send_prompt_to_agent(text)
 
     @work
     async def send_prompt_to_agent(self, prompt: str) -> None:
@@ -887,13 +889,14 @@ class Conversation(containers.Vertical):
             self.app.settings.get("shell.allow_commands", expect_type=str).split()
         )
 
-        if self._acp_command is not None:
+        if self._agent_data is not None:
 
-            def start_agent():
-                assert self._acp_command is not None
+            def start_agent() -> None:
+                """Start the agent after refreshing the UI."""
+                assert self._agent_data is not None
                 from toad.acp.agent import Agent
 
-                self.agent = Agent(self.project_path, self._acp_command)
+                self.agent = Agent(self.project_path, self._agent_data)
                 self.agent.start(self)
 
             self.call_after_refresh(start_agent)
@@ -1273,14 +1276,26 @@ class Conversation(containers.Vertical):
         self.refresh_bindings()
 
     async def slash_command(self, text: str) -> bool:
+        """Give Toad the opertunity to process slash commands.
+
+        Args:
+            text: The prompt, including the slash in the first position.
+
+        Returns:
+            `True` if Toad has processed the slash command, `False` if it should
+                be forwarded to the agent.
+        """
         command, _, parameters = text[1:].partition(" ")
         if command == "about":
             from toad import about
             from toad.widgets.markdown_note import MarkdownNote
 
-            about_md = about.render(self.app)
+            app = self.app
+            about_md = about.render(app)
             await self.post(MarkdownNote(about_md, classes="about"))
             self.app.copy_to_clipboard(about_md)
             self.notify(
                 "A copy of /about has been placed in your clipboard", title="About"
             )
+            return True
+        return False
