@@ -80,9 +80,10 @@ class MainScreen(Screen, can_focus=False):
 
     app = getters.app(ToadApp)
 
-    def __init__(self, project_path: Path) -> None:
+    def __init__(self, project_path: Path, acp_command: str | None = None) -> None:
         super().__init__()
         self.set_reactive(MainScreen.project_path, project_path)
+        self._acp_command = acp_command
 
     def get_loading_widget(self) -> Widget:
         throbber = self.app.settings.get("ui.throbber", str)
@@ -109,7 +110,9 @@ class MainScreen(Screen, can_focus=False):
                     flex=True,
                 ),
             )
-            yield Conversation(self.project_path).data_bind(MainScreen.project_path)
+            yield Conversation(self.project_path, self._acp_command).data_bind(
+                MainScreen.project_path
+            )
         yield Footer()
 
     @on(acp_messages.Plan)

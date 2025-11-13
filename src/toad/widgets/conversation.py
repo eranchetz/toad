@@ -219,7 +219,7 @@ class Conversation(containers.Vertical):
     current_mode: var[Mode | None] = var(None)
     turn: var[Literal["agent", "client"] | None] = var(None, bindings=True)
 
-    def __init__(self, project_path: Path) -> None:
+    def __init__(self, project_path: Path, acp_command: str | None = None) -> None:
         super().__init__()
 
         project_path = project_path.resolve().absolute()
@@ -235,6 +235,7 @@ class Conversation(containers.Vertical):
         self._agent_thought: AgentThought | None = None
         self._ansi_log: ANSILog | None = None
         self._last_escape_time: float = monotonic()
+        self._acp_command = acp_command
 
         self.project_data_path = paths.get_project_data(project_path)
         self.shell_history = History(self.project_data_path / "shell_history.jsonl")
@@ -886,13 +887,13 @@ class Conversation(containers.Vertical):
             self.app.settings.get("shell.allow_commands", expect_type=str).split()
         )
 
-        if self.app.acp_command:
+        if self._acp_command is not None:
 
             def start_agent():
+                assert self._acp_command is not None
                 from toad.acp.agent import Agent
 
-                assert self.app.acp_command is not None
-                self.agent = Agent(self.project_path, self.app.acp_command)
+                self.agent = Agent(self.project_path, self._acp_command)
                 self.agent.start(self)
 
             self.call_after_refresh(start_agent)
@@ -1271,7 +1272,7 @@ class Conversation(containers.Vertical):
             self.prompt.focus()
         self.refresh_bindings()
 
-    async def slash_command(self, text: str) -> None:
+    async def slash_command(self, text: str) -> bool:
         command, _, parameters = text[1:].partition(" ")
         if command == "about":
             from toad import about

@@ -32,7 +32,12 @@ class GridSelect(containers.ItemGrid, can_focus=True):
 
     @dataclass
     class Selected(Message):
+        grid_select: "GridSelect"
         selected_widget: Widget
+
+        @property
+        def control(self) -> Widget:
+            return self.grid_select
 
     def __init__(
         self,
@@ -158,7 +163,7 @@ class GridSelect(containers.ItemGrid, can_focus=True):
             except IndexError:
                 pass
             else:
-                self.post_message(self.Selected(highlighted_widget))
+                self.post_message(self.Selected(self, highlighted_widget))
 
 
 if __name__ == "__main__":

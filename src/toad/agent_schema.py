@@ -22,11 +22,15 @@ class Command(TypedDict):
 
 
 class Agent(TypedDict):
-    """Describes an agent which Toad can connect to. Currently only Agent Client Protocol is supported."""
+    """Describes an agent which Toad can connect to. Currently only Agent Client Protocol is supported.
+
+    This information is stoed within TOML files, where the filename is the "identity" key plus the extension ".toml"
+
+    """
 
     identity: str
     """A unique identifier for this agent. Should be a domain the agent developer owns,
-    although it doesn't have to resolve to anything.     
+    although it doesn't have to resolve to anything. Must be useable in a filename on all platforms. 
     For example: 'claude.anthropic.ai'"""
     name: str
     """The name of the agent. For example: 'Claude Code'."""

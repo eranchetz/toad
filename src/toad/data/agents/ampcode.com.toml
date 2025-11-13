@@ -1,0 +1,65 @@
+# Schema defined in agent_schema.py
+# https://github.com/tao12345666333/amp-acp
+
+identity = "ampcode.com"
+name = "Amp (AmpCode)"
+short_name = "amp"
+url = "https://ampcode.com"
+protocol = "acp"
+author_name = "AmpCode"
+author_url = "https://ampcode.com"
+publisher_name = "Will McGugan"
+publisher_url = "https://willmcgugan.github.io/"
+type = "coding"
+description = "Open-source ACP adapter that exposes the Amp CLI to editors such as Zed via the Agent Client Protocol."
+tags = []
+run_command."*" = "npx -y amp-acp"
+
+help = '''
+# Amp (AmpCode)
+
+**Bridge the Amp CLI to any ACP-compatible editor**
+
+The Amp ACP adapter streams the Amp CLI over the Agent Client Protocol so you can use Amp inside Zed and other ACP clients. The adapter is published as the open-source `amp-acp` package.
+
+## Prerequisites
+
+- Install the Amp CLI from https://ampcode.com and authenticate with `amp login`
+- Node.js 18+ so `npx` can run the adapter
+- Ensure the `AMP_EXECUTABLE` environment variable points at your Amp binary (or place `amp` on `PATH`)
+
+## Usage
+
+```bash
+AMP_EXECUTABLE=/usr/local/bin/amp AMP_PREFER_SYSTEM_PATH=1 npx -y amp-acp
+```
+
+The adapter streams Amp's JSON responses over ACP, letting your editor drive Amp Conversations. `AMP_PREFER_SYSTEM_PATH=1` lets the adapter reuse your system `amp` install instead of downloading another copy.
+
+## Editor configuration (Zed example)
+
+```json
+{
+  "agent_servers": {
+    "Amp": {
+      "command": "npx",
+      "args": ["-y", "amp-acp"],
+      "env": {
+        "AMP_EXECUTABLE": "/usr/local/bin/amp",
+        "AMP_PREFER_SYSTEM_PATH": "1"
+      }
+    }
+  }
+}
+```
+
+After configuring the agent, open the ACP panel in Zed (cmd-?/ctrl-?) to start chatting with Amp.
+
+---
+
+**Repository**: https://github.com/tao12345666333/amp-acp
+'''
+
+[actions."*".install_adapter]
+command = "npm install -g amp-acp"
+description = "Install the Amp ACP adapter globally so it is available without npx"

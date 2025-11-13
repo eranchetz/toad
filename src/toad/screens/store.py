@@ -1,5 +1,6 @@
 from importlib.metadata import version
 from itertools import zip_longest
+from pathlib import Path
 from typing import Self
 
 from textual.binding import Binding
@@ -14,6 +15,7 @@ from textual.css.query import NoMatches
 from textual import containers
 from textual import widgets
 
+import toad
 from toad.app import ToadApp
 from toad.pill import pill
 from toad.widgets.mandelbrot import Mandelbrot
@@ -60,6 +62,12 @@ class AgentItem(containers.VerticalGroup):
         yield widgets.Static(agent["description"], id="description")
 
 
+class LauncherGridSelect(GridSelect):
+    BINDINGS = [
+        Binding("enter", "select", "Launch"),
+    ]
+
+
 class Launcher(containers.VerticalGroup):
     app = getters.app(ToadApp)
     grid_select = getters.query_one("#launcher-grid-select", GridSelect)
@@ -98,7 +106,7 @@ class Launcher(containers.VerticalGroup):
         agents = self._agents
 
         if launcher_set:
-            with GridSelect(
+            with LauncherGridSelect(
                 id="launcher-grid-select", min_column_width=40, max_column_width=40
             ):
                 for digit, identity in zip_longest(self.DIGITS, launcher_set):
@@ -220,14 +228,32 @@ class StoreScreen(Screen):
             for agent in ordered_agents:
                 yield AgentItem(agent)
 
-    @on(GridSelect.Selected)
+    @on(GridSelect.Selected, "#agents-view")
     @work
     async def on_grid_select_selected(self, event: GridSelect.Selected):
-        if isinstance(event.selected_widget, AgentItem):
-            from toad.screens.agent_modal import AgentModal
+        assert isinstance(event.selected_widget, AgentItem)
+        from toad.screens.agent_modal import AgentModal
 
-            await self.app.push_screen_wait(AgentModal(event.selected_widget.agent))
-            self.app.save_settings()
+        await self.app.push_screen_wait(AgentModal(event.selected_widget.agent))
+        self.app.save_settings()
+
+    @on(GridSelect.Selected, "#launcher GridSelect")
+    @work
+    async def on_launcher_selected(self, event: GridSelect.Selected):
+        launcher_item = event.selected_widget
+        assert isinstance(launcher_item, LauncherItem)
+
+        agent = launcher_item.agent
+        from toad.screens.main import MainScreen
+
+        project_path = Path(self.app.project_dir or "./")
+
+        run_command = toad.get_os_matrix(agent["run_command"])
+        # TODO: implement fallback
+        assert run_command is not None
+
+        screen = MainScreen(project_path, run_command)
+        await self.app.push_screen_wait(screen)
 
     @work
     async def on_mount(self) -> None:
