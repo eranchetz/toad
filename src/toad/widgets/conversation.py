@@ -451,13 +451,13 @@ class Conversation(containers.Vertical):
         elif text := event.body.strip():
             await self.prompt_history.append(event.body)
             self.prompt_history_index = 0
-            if text.startswith("/"):
-                await self.slash_command(text)
-            else:
-                await self.post(UserInput(text))
-                self._loading = await self.post(Loading("Please wait..."), loading=True)
-                await asyncio.sleep(0)
-                self.send_prompt_to_agent(text)
+            if text.startswith("/") and await self.slash_command(text):
+                # Toad has processes the slash command.
+                return
+            await self.post(UserInput(text))
+            self._loading = await self.post(Loading("Please wait..."), loading=True)
+            await asyncio.sleep(0)
+            self.send_prompt_to_agent(text)
 
     @work
     async def send_prompt_to_agent(self, prompt: str) -> None:
@@ -1271,15 +1271,27 @@ class Conversation(containers.Vertical):
             self.prompt.focus()
         self.refresh_bindings()
 
-    async def slash_command(self, text: str) -> None:
+    async def slash_command(self, text: str) -> bool:
+        """Give Toad the opertunity to process slash commands.
+
+        Args:
+            text: The prompt, including the slash in the first position.
+
+        Returns:
+            `True` if Toad has processed the slash command, `False` if it should
+                be forwarded to the agent.
+        """
         command, _, parameters = text[1:].partition(" ")
         if command == "about":
             from toad import about
             from toad.widgets.markdown_note import MarkdownNote
 
-            about_md = about.render(self.app)
+            app = self.app
+            about_md = about.render(app)
             await self.post(MarkdownNote(about_md, classes="about"))
             self.app.copy_to_clipboard(about_md)
             self.notify(
                 "A copy of /about has been placed in your clipboard", title="About"
             )
+            return True
+        return False
