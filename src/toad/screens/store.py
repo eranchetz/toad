@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from importlib.metadata import version
 from itertools import zip_longest
+import os
 from pathlib import Path
 from typing import Self
 
@@ -42,6 +43,11 @@ QR = """\
 ▀▀▀▀▀▀▀ ▀▀▀  ▀   ▀▀▀▀▀▀▀▀"""
 
 
+@dataclass
+class LaunchAgent(Message):
+    identity: str
+
+
 class AgentItem(containers.VerticalGroup):
     """An entry in the Agent grid select."""
 
@@ -71,7 +77,7 @@ class LauncherGridSelect(GridSelect):
     BINDINGS = [
         Binding("enter", "select", "Details", tooltip="Open agent details"),
         # Binding("r", "remove", "Remove", tooltip="Remove agent from launcher"),
-        # Binding("space", "details", "Details", tooltip="Agent details"),
+        Binding("space", "launch", "Lauch", tooltip="Launch highlighted agent"),
     ]
 
     def action_details(self) -> None:
@@ -91,6 +97,13 @@ class LauncherGridSelect(GridSelect):
             pass
         else:
             self.app.settings.set("launcher.agents", "\n".join(agents))
+
+    def action_launch(self) -> None:
+        if self.highlighted is None:
+            return
+        child = self.children[self.highlighted]
+        assert isinstance(child, LauncherItem)
+        self.post_message(LaunchAgent(child.agent["identity"]))
 
 
 class Launcher(containers.VerticalGroup):
@@ -166,9 +179,18 @@ class LauncherItem(containers.VerticalGroup):
 
 
 class AgentGridSelect(GridSelect):
+    BINDINGS = [
+        Binding("enter", "select", "Details", tooltip="Open agent details"),
+        Binding("space", "launch", "Lauch", tooltip="Launch highlighted agent"),
+    ]
     BINDING_GROUP_TITLE = "Agent Select"
 
-    BINDINGS = [Binding("enter", "select", "Details", tooltip="Open agent details")]
+    def action_launch(self) -> None:
+        if self.highlighted is None:
+            return
+        child = self.children[self.highlighted]
+        assert isinstance(child, AgentItem)
+        self.post_message(LaunchAgent(child.agent["identity"]))
 
 
 class Container(containers.VerticalScroll):
@@ -220,6 +242,10 @@ class StoreScreen(Screen):
     ):
         self._agents: dict[str, Agent] = {}
         super().__init__(name=name, id=id, classes=classes)
+
+    @property
+    def agents(self) -> dict[str, Agent]:
+        return self._agents
 
     def compose(self) -> ComposeResult:
         with containers.VerticalGroup(id="title-container"):
@@ -318,19 +344,18 @@ class StoreScreen(Screen):
         await self.app.push_screen_wait(AgentModal(launcher_item.agent))
         self.app.save_settings()
 
-    # @on(GridSelect.Selected, "#launcher GridSelect")
-    # @work
-    # async def on_launcher_selected(self, event: GridSelect.Selected):
-    #     launcher_item = event.selected_widget
-    #     assert isinstance(launcher_item, LauncherItem)
+    @work
+    async def launch_agent(self, agent_identity: str) -> None:
+        from toad.screens.main import MainScreen
 
-    #     agent = launcher_item.agent
-    #     from toad.screens.main import MainScreen
+        agent = self.agents[agent_identity]
+        project_path = Path(self.app.project_dir or os.getcwd())
+        screen = MainScreen(project_path, agent)
+        await self.app.push_screen_wait(screen)
 
-    #     project_path = Path(self.app.project_dir or "./")
-
-    #     screen = MainScreen(project_path, agent)
-    #     await self.app.push_screen_wait(screen)
+    @on(LaunchAgent)
+    def on_launch_agent(self, message: LaunchAgent) -> None:
+        self.launch_agent(message.identity)
 
     @work
     async def on_mount(self) -> None:
