@@ -699,8 +699,8 @@ class ANSIClear(NamedTuple):
 
 @rich.repr.auto
 class ANSIScrollMargin(NamedTuple):
-    top: int | None = None
-    bottom: int | None = None
+    top: int = 0
+    bottom: int = 0
 
     def __rich_repr__(self) -> rich.repr.Result:
         yield self.top
@@ -944,10 +944,7 @@ class ANSIStream:
                 case ["2", _, "K"]:
                     return cls.CLEAR_LINE
                 case [top, bottom, "r"]:
-                    return ANSIScrollMargin(
-                        int(top or 1) if top else None,
-                        int(bottom or 1) if bottom else None,
-                    )
+                    return ANSIScrollMargin(int(top or 1), int(bottom or 1))
                 case ["4", _, "h" | "l" as replace_mode]:
                     return (
                         cls.ENABLE_REPLACE_MODE
@@ -1504,8 +1501,10 @@ class TerminalState:
         self.alternate_buffer = Buffer()
         """Alternate buffer lines."""
 
-        self.scroll_margin_top: int | None = None
-        self.scroll_margin_bottom: int | None = None
+        self.scroll_margin_top: int = 0
+        """Scroll margin at the top of the screen (initial lines unaffected by scroll operations)"""
+        self.scroll_margin_bottom: int = 0
+        """Scroll margin at bottom of the screen (lines at end of buffer unaffected by scroll operations)"""
 
         self.dec_state = DECState()
         """The DEC (character set) state."""
@@ -1529,8 +1528,8 @@ class TerminalState:
             self.auto_wrap,
             True,
         )
-        yield "scroll_margin_top", self.scroll_margin_top, None
-        yield "scroll_margin_bottom", self.scroll_margin_bottom, None
+        yield "scroll_margin_top", self.scroll_margin_top, 0
+        yield "scroll_margin_bottom", self.scroll_margin_bottom, 0
         yield "dec_state", self.dec_state
 
     @property
