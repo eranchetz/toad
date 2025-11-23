@@ -73,8 +73,6 @@ class FEPattern(Pattern):
 
     def check(self) -> PatternCheck:
         sequence = io.StringIO()
-        # characters: list[str] = []
-        # store = characters.append
         store = sequence.write
         store("\x1b")
         store(character := (yield))
@@ -82,7 +80,8 @@ class FEPattern(Pattern):
         match character:
             # CSI
             case "[":
-                while (character := (yield)) not in self.CSI_TERMINATORS:
+                CSI_TERMINATORS = self.CSI_TERMINATORS
+                while (character := (yield)) not in CSI_TERMINATORS:
                     store(character)
                 store(character)
                 return ("csi", sequence.getvalue())
@@ -90,7 +89,8 @@ class FEPattern(Pattern):
             # OSC
             case "]":
                 last_character = ""
-                while (character := (yield)) not in self.OSC_TERMINATORS:
+                OSC_TERMINATORS = self.OSC_TERMINATORS
+                while (character := (yield)) not in OSC_TERMINATORS:
                     store(character)
                     if last_character == "\x1b" and character == "\\":
                         break
@@ -101,7 +101,8 @@ class FEPattern(Pattern):
             # DCS
             case "P":
                 last_character = ""
-                while (character := (yield)) not in self.DSC_TERMINATORS:
+                DSC_TERMINATORS = self.DSC_TERMINATORS
+                while (character := (yield)) not in DSC_TERMINATORS:
                     store(character)
                     if last_character == "\x1b" and character == "\\":
                         break
@@ -681,15 +682,23 @@ class ScrollMargin(NamedTuple):
     """Margins at the top and bottom of a window that won't scroll."""
 
     top: int | None = None
-    """Margin at the top (in lines)."""
+    """Margin at the top (in lines), or `None` for no scroll margin set."""
     bottom: int | None = None
-    """Margin at the bottom (in lines)."""
+    """Margin at the bottom (in lines), or `None` for no scroll margin set."""
 
     def __rich_repr__(self) -> rich.repr.Result:
         yield self.top
         yield self.bottom
 
     def get_line_range(self, height: int) -> tuple[int, int]:
+        """Get the scrollable line range (inclusive).
+
+        Args:
+            height: terminal height.
+
+        Returns:
+            A tuple of the (exclusive) top and bottom line numbers that scroll.
+        """
         return (
             self.top or 0,
             height - 1 if self.bottom is None else self.bottom,

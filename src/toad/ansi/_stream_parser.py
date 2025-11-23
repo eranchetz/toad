@@ -92,12 +92,12 @@ class ReadPatterns[ResultType](StreamRead[ResultType]):
 
     def feed(self, text: str) -> tuple[int, TokenMatch | None]:
         consumed = 0
+        patterns = self.patterns
         for consumed, character in enumerate(text, 1):
-            items = list(self.patterns.items())
+            items = list(patterns.items())
             for name, sequence_validator in items:
-                value = sequence_validator.feed(character)
-                if value is False:
-                    self.patterns.pop(name)
+                if (value := sequence_validator.feed(character)) is False:
+                    patterns.pop(name)
                 elif value:
                     return consumed, (name, value)
         self._text.append(text[:consumed])
