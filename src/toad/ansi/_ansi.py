@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+from bisect import bisect_right
 import io
+from itertools import accumulate
 import re
-import termios
-import rich.repr
+
 from dataclasses import dataclass, field
 from functools import lru_cache
-
 from typing import Iterable, Literal, Mapping, NamedTuple
+
+import rich
+from rich.cells import cell_len
+
 from textual import events
 from textual.color import Color
 from textual.content import Content
@@ -60,37 +64,6 @@ class DECInvoke(NamedTuple):
 
 
 DEC_SLOTS = {"(": 0, ")": 1, "*": 2, "+": 3, "-": 1, ".": 2, "//": 3}
-
-
-class PTYFlags(NamedTuple):
-    """Terminal related flags."""
-
-    canonical: bool = True
-    echo: bool = True
-    signals: bool = True
-    extended_input_processing: bool = True
-    translate_cr_to_nl_on_input: bool = True
-    translate_nl_to_cr_on_input: bool = False
-    ignore_cr: bool = False
-
-    @classmethod
-    def from_file_descriptor(cls, fd: int) -> PTYFlags | None:
-        try:
-            attrs = termios.tcgetattr(fd)
-        except termios.error:
-            return None
-        iflag = attrs[0]
-        lflag = attrs[3]
-
-        return PTYFlags(
-            canonical=bool(lflag & termios.ICANON),
-            echo=bool(lflag & termios.ECHO),
-            signals=bool(lflag & termios.ISIG),
-            extended_input_processing=bool(lflag & termios.IEXTEN),
-            translate_cr_to_nl_on_input=bool(iflag & termios.ICRNL),
-            translate_nl_to_cr_on_input=bool(iflag & termios.INLCR),
-            ignore_cr=bool(iflag & termios.IGNCR),
-        )
 
 
 class FEPattern(Pattern):
@@ -649,6 +622,7 @@ class ANSIStream:
                     yield ANSIStyle(self.style)
                 else:
                     if (ansi_segment := self._parse_csi(csi)) is not None:
+                        print("csi", ansi_segment)
                         yield ansi_segment
 
             case ["dec", dec]:
@@ -741,6 +715,8 @@ class ScrollMargin(NamedTuple):
 class Buffer:
     """A terminal buffer (scrollback or alternate)"""
 
+    name: str = "buffer"
+    """Name of the buffer (debugging aid)."""
     lines: list[LineRecord] = field(default_factory=list)
     """unfolded lines."""
     line_to_fold: list[int] = field(default_factory=list)
@@ -804,6 +780,7 @@ class Buffer:
         del self.lines[:]
         del self.line_to_fold[:]
         del self.folded_lines[:]
+        # self.scroll_margin = ScrollMargin(0, 0)
         self.cursor_line = 0
         self.cursor_offset = 0
         self.max_line_width = 0
@@ -900,16 +877,14 @@ class TerminalState:
         """Should content wrap?"""
         self.current_directory: str = ""
         """Current working directory."""
-        self.scrollback_buffer = Buffer()
+        self.scrollback_buffer = Buffer("scrollback")
         """Scrollbar buffer lines."""
-        self.alternate_buffer = Buffer()
+        self.alternate_buffer = Buffer("alternate")
         """Alternate buffer lines."""
         self.dec_state = DECState()
         """The DEC (character set) state."""
         self.mouse_tracking_state = MouseTracking()
         """The mouse tracking state."""
-        self.pty_flags = PTYFlags()
-        """Current pty flags."""
         self._finalized: bool = False
 
         self._updates: int = 0
@@ -938,7 +913,6 @@ class TerminalState:
         yield "replace_mode", self.replace_mode, True
         yield "auto_wrap", self.auto_wrap, True
         yield "dec_state", self.dec_state
-        yield "pty_fflags", self.pty_flags
 
     @property
     def buffer(self) -> Buffer:
@@ -971,16 +945,6 @@ class TerminalState:
         if height is not None:
             self.height = height
         self._reflow()
-
-    def update_pty(self, fd: int) -> None:
-        """Update pty flags from file descriptot.
-
-        Args:
-            fd: File descriptor.
-
-        """
-        if (pty_flags := PTYFlags.from_file_descriptor(fd)) is not None:
-            self.pty_flags = pty_flags
 
     def key_event_to_stdin(self, event: events.Key) -> str | None:
         """Get the stdin string for a key event.
@@ -1027,12 +991,21 @@ class TerminalState:
         buffer.line_to_fold.clear()
         width = self.width
 
+        from textual import log
+
+        for offset, line in enumerate(buffer.lines):
+            print(offset, repr(line.content.plain))
+
+        original_lines = buffer.lines.copy()
+
         for line_no, line_record in enumerate(buffer.lines):
             line_expanded_tabs = line_record.content.expand_tabs(8)
             line_record.folds[:] = self._fold_line(line_no, line_expanded_tabs, width)
             line_record.updates = self.advance_updates()
             buffer.line_to_fold.append(len(buffer.folded_lines))
             buffer.folded_lines.extend(line_record.folds)
+
+        assert buffer.lines == original_lines
 
         # After reflow, we need to work out where the cursor is within the folded lines
         # cursor_line = min(cursor_line, len(buffer.lines) - 1)
@@ -1062,6 +1035,7 @@ class TerminalState:
         Returns:
             A pair of deltas or `None for full refresh, for scrollback and alternate screen.
         """
+        print(repr(text))
         alternate_buffer = self.alternate_buffer
         scrollback_buffer = self.scrollback_buffer
         # Reset updated lines delta
@@ -1213,10 +1187,10 @@ class TerminalState:
                     )
                     cursor_line_offset = self.get_cursor_line_offset(buffer)
 
-                    if cursor_line_offset > len(line.content):
-                        line.content = line.content.pad_right(
-                            cursor_line_offset - len(line.content)
-                        )
+                    # if cursor_line_offset > len(line.content):
+                    #     line.content = line.content.pad_right(
+                    #         cursor_line_offset - len(line.content)
+                    #     )
 
                     if replace is not None:
                         start_replace, end_replace = ansi_command.get_replace_offsets(
@@ -1322,9 +1296,6 @@ class TerminalState:
 
             case _:
                 print("Unhandled", ansi_command)
-        # from textual import log
-
-        # log(self)
 
     def _line_updated(self, buffer: Buffer, line_no: int) -> None:
         """Mark a line has having been udpated.
@@ -1340,6 +1311,47 @@ class TerminalState:
         except IndexError:
             pass
 
+    @classmethod
+    def _wrap_content(cls, content: Content, width: int) -> list[Content]:
+        """Wrap Content to specified width based on cell width.
+
+        Args:
+            content: The Content object to wrap.
+            width: Maximum cell width per line.
+
+        Returns:
+            List of Content objects, one per line.
+        """
+        if width <= 0:
+            return [content]
+
+        if content.cell_length <= width:
+            return [content]
+
+        plain = content.plain
+        n = len(plain)
+
+        # Pre-compute cumulative cell widths: O(n)
+        cumulative = [0, *accumulate(cell_len(c) for c in plain)]
+
+        # Find break indices using binary search: O(lines * log n)
+        breaks = [0]
+        start = 0
+
+        while start < n:
+            target = cumulative[start] + width
+            end = bisect_right(cumulative, target, start + 1, n + 1) - 1
+
+            # Ensure progress (handles chars wider than width)
+            if end <= start:
+                end = start + 1
+
+            breaks.append(end)
+            start = end
+
+        # Slice content at break points
+        return [content[breaks[i] : breaks[i + 1]] for i in range(len(breaks) - 1)]
+
     def _fold_line(self, line_no: int, line: Content, width: int) -> list[LineFold]:
         updates = self._updates
         if not self.auto_wrap:
@@ -1350,9 +1362,15 @@ class TerminalState:
         line_length = line.cell_length
         if line_length <= width:
             return [LineFold(line_no, 0, 0, line, updates)]
-        divide_offsets = list(range(width, line_length, width))
-        folded_lines = [folded_line for folded_line in line.divide(divide_offsets)]
-        offsets = [0, *divide_offsets]
+        # divide_offsets = list(range(width, line_length, width))
+        # folded_lines = [folded_line for folded_line in line.divide(divide_offsets)]
+
+        folded_lines = self._wrap_content(line, width)
+        offsets = [0, *accumulate(len(line) for line in folded_lines)]
+
+        print(folded_lines, offsets)
+
+        # offsets = [0, *divide_offsets]
         folds = [
             LineFold(line_no, line_offset, offset, folded_line, updates)
             for line_offset, (offset, folded_line) in enumerate(

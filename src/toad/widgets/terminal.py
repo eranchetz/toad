@@ -115,7 +115,8 @@ class Terminal(ScrollView, can_focus=True):
         with timer(f"write {len(text)} characters"):
             scrollback_delta, alternate_delta = self.state.write(text)
         with timer("Update widget"):
-            self._update_from_state(scrollback_delta, alternate_delta)
+            self._update_from_state(None, None)
+            # self._update_from_state(scrollback_delta, alternate_delta)
 
     def _update_from_state(
         self, scrollback_delta: set[int] | None, alternate_delta: set[int] | None
@@ -197,8 +198,12 @@ class Terminal(ScrollView, can_focus=True):
             return Strip.blank(width, rich_style)
 
         line_record = buffer.lines[line_no]
-        cache_key: tuple | None = (self.state.alternate_screen, y, updates)
-        cache_key = None
+        cache_key: tuple | None = (
+            self.state.alternate_screen,
+            line_record.updates,
+            updates,
+        )
+        cache_key = None  # REMOVE
 
         if (
             not self.hide_cursor
@@ -219,7 +224,9 @@ class Terminal(ScrollView, can_focus=True):
             and (strip := self._terminal_render_cache.get(cache_key))
         ):
             strip = strip.crop(x, x + width)
-            strip = strip.adjust_cell_length(width, line_record.style.rich_style)
+            strip = strip.adjust_cell_length(
+                width, (visual_style + line_record.style).rich_style
+            )
             strip = strip.apply_offsets(x + offset, line_no)
             return strip
 

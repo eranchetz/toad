@@ -67,8 +67,11 @@ class CommandPane(Terminal):
             return
         width, height = self.scrollable_content_region.size
         self.update_size(width, height)
-        size = struct.pack("HHHH", height, width, 0, 0)
-        fcntl.ioctl(self._master, termios.TIOCSWINSZ, size)
+        # try:
+        #     size = struct.pack("HHHH", height, width, 0, 0)
+        #     fcntl.ioctl(self._master, termios.TIOCSWINSZ, size)
+        # except OSError:
+        #     pass
 
     @property
     def is_cooked(self) -> bool:
@@ -136,7 +139,6 @@ class CommandPane(Terminal):
             os.fdopen(os.dup(master), "wb", 0),
         )
         unicode_decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
-        self.state.update_pty(master)
         self.log(self.state)
 
         try:
@@ -181,6 +183,7 @@ if __name__ == "__main__":
     COMMAND = "htop"
     # COMMAND = "uv run python test_ind.py"
     COMMAND = os.environ["SHELL"]
+    COMMAND = "python test_flow.py"
 
     class CommandApp(App):
         CSS = """
