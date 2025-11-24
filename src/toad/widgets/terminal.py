@@ -123,6 +123,9 @@ class Terminal(ScrollView, can_focus=True):
         if self._anchored and not self._anchor_released:
             self.scroll_y = self.max_scroll_y
 
+        scroll_y = int(self.scroll_y)
+        visible_lines = frozenset(range(scroll_y, scroll_y + height))
+
         if scrollback_delta is None and alternate_delta is None:
             self.refresh()
         else:
@@ -132,7 +135,8 @@ class Terminal(ScrollView, can_focus=True):
                 self.refresh(Region(0, 0, window_width, scrollback_height))
             else:
                 refresh_lines = [
-                    Region(0, y, window_width, 1) for y in sorted(scrollback_delta)
+                    Region(0, y - scroll_y, window_width, 1)
+                    for y in sorted(scrollback_delta & visible_lines)
                 ]
                 if refresh_lines:
                     self.refresh(*refresh_lines)
@@ -148,8 +152,8 @@ class Terminal(ScrollView, can_focus=True):
                 )
             else:
                 refresh_lines = [
-                    Region(0, y + scrollback_height, window_width, 1)
-                    for y in sorted(alternate_delta)
+                    Region(0, y + scrollback_height - scroll_y, window_width, 1)
+                    for y in sorted(alternate_delta & visible_lines)
                 ]
                 if refresh_lines:
                     self.refresh(*refresh_lines)
@@ -265,7 +269,7 @@ class Terminal(ScrollView, can_focus=True):
                 self._escape_reset_timer.stop()
 
         if event.key == "enter":
-            self.write_process_stdin("\r")
+            self.write_process_stdin("\n")
         else:
             if (stdin := self.state.key_event_to_stdin(event)) is not None:
                 self.write_process_stdin(stdin)
