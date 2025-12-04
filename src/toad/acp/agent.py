@@ -414,13 +414,14 @@ class Agent(AgentBase):
             try:
                 line_str = line.decode("utf-8")
             except Exception as error:
-                print("Unable to decode utf-8from agent:", error)
+                print("Unable to decode utf-8 from agent:", error)
                 continue
 
             try:
                 agent_data: jsonrpc.JSONType = json.loads(line_str)
             except Exception as error:
-                print("Error decodeing JSON from agent:", error)
+                print(repr(line_str))
+                print("Error decoding JSON from agent:", error)
                 continue
 
             log(agent_data)
