@@ -312,12 +312,12 @@ class ANSIFeatures(NamedTuple):
     auto_wrap: bool | None = None
 
 
-MOUSE_TRACKING_MODES = Literal["none", "button", "drag", "all"]
+MOUSE_TRACKING_MODES = Literal["button", "drag", "all"]
 MOUSE_FORMAT = Literal["normal", "utf8", "sgr", "urxvt"]
 
 
 class ANSIMouseTracking(NamedTuple):
-    tracking: MOUSE_TRACKING_MODES | None = None
+    mode: Literal["none"] | MOUSE_TRACKING_MODES | None = None
     format: MOUSE_FORMAT | None = None
     focus_events: bool | None = None
     alternate_scroll: bool | None = None
@@ -595,7 +595,7 @@ class ANSIStream:
                     if match := re.fullmatch(r"\[\?([0-9;]+)([hl])", csi):
                         modes = [m for m in match.group(1).split(";")]
                         enable = match.group(2) == "h"
-                        tracking: MOUSE_TRACKING_MODES | None = None
+                        tracking: Literal["none"] | MOUSE_TRACKING_MODES | None = None
                         format: MOUSE_FORMAT | None = None
                         focus_events: bool | None = None
                         alternate_scroll: bool | None = None
@@ -615,7 +615,7 @@ class ANSIStream:
                             elif mode == "1007":
                                 alternate_scroll = enable
                         return ANSIMouseTracking(
-                            tracking=tracking,
+                            mode=tracking,
                             format=format,
                             focus_events=focus_events,
                             alternate_scroll=alternate_scroll,
@@ -910,7 +910,7 @@ class DECState:
 class MouseTracking:
     """The mouse tracking state."""
 
-    tracking: MOUSE_TRACKING_MODES = "none"
+    tracking: MOUSE_TRACKING_MODES = "all"
     format: MOUSE_FORMAT = "normal"
     focus_events: bool = False
     alternate_scroll: bool = False
@@ -957,7 +957,7 @@ class TerminalState:
         """Alternate buffer lines."""
         self.dec_state = DECState()
         """The DEC (character set) state."""
-        self.mouse_tracking: MouseTracking | None = MouseTracking()
+        self.mouse_tracking: MouseTracking | None = None
         """The mouse tracking state."""
 
         self._updates: int = 0
@@ -1416,20 +1416,19 @@ class TerminalState:
                 self.current_directory = path
 
             case ANSIMouseTracking(tracking, format, focus_events, alternate_scroll):
-                if tracking is None:
+                if tracking == "none":
                     self.mouse_tracking = None
-                else:
-                    mouse_tracking = self.mouse_tracking
-                    if mouse_tracking is None:
-                        mouse_tracking = self.mouse_tracking = MouseTracking()
-                    if tracking is not None:
-                        mouse_tracking.tracking = tracking
-                    if format is not None:
-                        mouse_tracking.format = format
-                    if focus_events is not None:
-                        mouse_tracking.focus_events = focus_events
-                    if alternate_scroll is not None:
-                        mouse_tracking.alternate_scroll = alternate_scroll
+                    return
+                if (mouse_tracking := self.mouse_tracking) is None:
+                    mouse_tracking = self.mouse_tracking = MouseTracking()
+                if tracking is not None:
+                    mouse_tracking.tracking = tracking
+                if format is not None:
+                    mouse_tracking.format = format
+                if focus_events is not None:
+                    mouse_tracking.focus_events = focus_events
+                if alternate_scroll is not None:
+                    mouse_tracking.alternate_scroll = alternate_scroll
 
             case _:
                 print("Unhandled", ansi_command)
@@ -1466,9 +1465,6 @@ class TerminalState:
                 zip(offsets, folded_lines)
             )
         ]
-        # if len(folds) > 1:
-        #     for fold in folds:
-        #         print(fold)
         assert len(folds)
         return folds
 

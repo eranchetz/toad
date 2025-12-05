@@ -13,7 +13,7 @@ publisher_url = "https://willmcgugan.github.io/"
 type = "coding"
 description = "The open platform for cloud coding agents"
 tags = []
-run_command."*" = "uvx openhands acp"
+run_command."*" = "uvx --from git+https://github.com/OpenHands/OpenHands-CLI.git@xw/debug-acp openhands acp"
 recommended = true
 
 help = '''
@@ -33,3 +33,4 @@ Scale from one to thousands of agents -- open source, model agnostic, and enterp
 command = "uv tool install openhands --python 3.12"
 bootstral_uv = true
 description = "Install OpenHands"
+

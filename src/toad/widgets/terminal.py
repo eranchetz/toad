@@ -5,6 +5,7 @@ from typing import Any, Callable
 
 from textual.cache import LRUCache
 
+from textual import on
 from textual import events
 from textual.message import Message
 from textual.reactive import reactive
@@ -359,10 +360,7 @@ class Terminal(ScrollView, can_focus=True):
                 line.render_segments(visual_style), cell_length=line.cell_length
             )
         except Exception:
-            from traceback import print_exc
-
-            print_exc()
-            self.log(line.spans)
+            # TODO: Is this neccesary?
             strip = Strip.blank(line.cell_length)
 
         if cache_key is not None:
@@ -407,6 +405,70 @@ class Terminal(ScrollView, can_focus=True):
 
         if (stdin := self.state.key_event_to_stdin(event)) is not None:
             self.write_process_stdin(stdin)
+
+    @property
+    def allow_select(self) -> bool:
+        return False
+        return not self.is_finalized
+
+    def _encode_mouse_event_sgr(self, event: events.MouseEvent) -> str:
+        x = int(event.x)
+        y = int(event.y)
+
+        if isinstance(event, events.MouseMove):
+            button = event.button + 32 if event.button else 35
+        else:
+            button = event.button - 1
+            if button >= 4:
+                button = button - 4 + 128
+            if event.shift:
+                button += 4
+            if event.meta:
+                button += 8
+            if event.ctrl:
+                button += 16
+
+        if isinstance(event, events.MouseDown):
+            final_character = "M"
+        elif isinstance(event, events.MouseUp):
+            button = 0
+            final_character = "m"
+        else:
+            final_character = "M"
+        mouse_stdin = f"\x1b[<{button};{x + 1};{y + 1}{final_character}"
+        return mouse_stdin
+
+    @on(events.MouseMove)
+    def on_mouse_move(self, event: events.MouseMove) -> None:
+        if self.is_finalized:
+            return
+        if (mouse_tracking := self.state.mouse_tracking) is None:
+            return
+        if mouse_tracking.tracking == "all" or (
+            event.button and mouse_tracking.tracking == "drag"
+        ):
+            self._handle_mouse_event(event)
+            event.prevent_default()
+            event.stop()
+
+    @on(events.MouseDown)
+    @on(events.MouseUp)
+    def on_mouse_button(self, event: events.MouseUp | events.MouseDown) -> None:
+        if self.is_finalized:
+            return
+        if self.state.mouse_tracking is None:
+            return
+        self._handle_mouse_event(event)
+        event.prevent_default()
+        event.stop()
+
+    def _handle_mouse_event(self, event: events.MouseEvent) -> None:
+        if (mouse_tracking := self.state.mouse_tracking) is None:
+            return
+        # TODO: Other mouse tracking formats
+        match mouse_tracking.format:
+            case "sgr":
+                self.write_process_stdin(self._encode_mouse_event_sgr(event))
 
     def on_paste(self, event: events.Paste) -> None:
         for character in event.text:
