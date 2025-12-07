@@ -479,12 +479,12 @@ class Conversation(containers.Vertical):
 
         if message.message:
             error = Content.assemble(
-                (message.message, "bold"),
-                " ",
-                message.details.strip()
+                Content.from_markup(message.message).stylize("$text-error"),
+                " - ",
+                Content.from_markup(message.details.strip()).stylize("dim")
             )
         else:
-            error = Content(message.details.strip())
+            error = Content.from_markup(message.details.strip()).stylize("$text-error")
         await self.post(Note(error, classes="-error"))
 
     @on(messages.WorkStarted)
