@@ -211,7 +211,7 @@ class PromptTextArea(HighlightedTextArea):
         else:
             if self.selection.is_empty and not select:
                 row, _column = self.selection[0]
-                if row == 0 or row == (self.wrapped_document.height - 1):
+                if row == 0:
                     self.post_message(
                         messages.HistoryMove(-1, self.shell_mode, self.text)
                     )
@@ -224,7 +224,7 @@ class PromptTextArea(HighlightedTextArea):
         else:
             if self.selection.is_empty and not select:
                 row, _column = self.selection[0]
-                if row == 0 or row == (self.wrapped_document.height - 1):
+                if row == (self.wrapped_document.height - 1):
                     self.post_message(
                         messages.HistoryMove(+1, self.shell_mode, self.text)
                     )
@@ -540,7 +540,9 @@ class Prompt(containers.VerticalGroup):
         return self
 
     def append(self, text: str) -> None:
-        self.query_one(HighlightedTextArea).insert(text)
+        self.query_one(HighlightedTextArea).insert(
+            text, maintain_selection_offset=False
+        )
 
     def watch_auto_completes(self, auto_complete: list[Option]) -> None:
         if auto_complete:

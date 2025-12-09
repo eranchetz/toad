@@ -37,6 +37,7 @@ class History:
     @current.setter
     def current(self, current: str) -> None:
         self._current = current
+        print(self, "set", current)
 
     @property
     def size(self) -> int:
@@ -48,7 +49,7 @@ class History:
         Returns:
             `True` if lines were read, otherwise `False`.
         """
-
+        print("OPEN")
         if self._opened:
             return True
 
@@ -88,7 +89,7 @@ class History:
 
         if not input:
             return True
-
+        print(self, "appen", repr(input))
         self.complete.add_words([input.split(" ")[0]])
 
         def write_line() -> bool:

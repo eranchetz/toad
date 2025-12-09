@@ -22,7 +22,7 @@ from textual.content import Content
 from textual.geometry import clamp
 from textual.css.query import NoMatches
 from textual.widget import Widget
-from textual.widgets import Static
+from textual.widgets import Static, TextArea
 from textual.widgets.markdown import MarkdownBlock
 from textual.geometry import Offset, Spacing
 from textual.reactive import var
@@ -218,8 +218,8 @@ class Conversation(containers.Vertical):
     prompt = getters.query_one(Prompt)
     app = getters.app(ToadApp)
     _shell: var[Shell | None] = var(None)
-    shell_history_index: var[int] = var(0, init=False)
-    prompt_history_index: var[int] = var(0, init=False)
+    shell_history_index: var[int] = var(0, init=False, always_update=True)
+    prompt_history_index: var[int] = var(0, init=False, always_update=True)
 
     agent: var[AgentBase | None] = var(None, bindings=True)
     agent_info: var[Content] = var(Content())
@@ -582,7 +582,8 @@ class Conversation(containers.Vertical):
     @on(Menu.Dismissed)
     async def on_menu_dismissed(self, event: Menu.Dismissed) -> None:
         event.stop()
-        self.window.focus(scroll_visible=False)
+        if event.menu.has_focus:
+            self.window.focus(scroll_visible=False)
         await event.menu.remove()
 
     @on(CurrentWorkingDirectoryChanged)
@@ -1040,8 +1041,6 @@ class Conversation(containers.Vertical):
                 self.refresh_block_cursor()
                 break
             widget = parent
-        # self.call_after_refresh(self.refresh_block_cursor)
-        # event.stop()
 
     async def post[WidgetType: Widget](
         self, widget: WidgetType, *, anchor: bool = True, loading: bool = False
@@ -1094,15 +1093,24 @@ class Conversation(containers.Vertical):
     @property
     def shell(self) -> Shell:
         """A Shell instance."""
-        system = platform.system()
-        if system == "Darwin":
-            shell_command = self.app.settings.get("shell.macos.run", str, expand=False)
-            shell_start = self.app.settings.get("shell.macos.start", str, expand=False)
-        else:
-            shell_command = self.app.settings.get("shell.linux.run", str, expand=False)
-            shell_start = self.app.settings.get("shell.linux.start", str, expand=False)
 
         if self._shell is None or self._shell.is_finished:
+            system = platform.system()
+            if system == "Darwin":
+                shell_command = self.app.settings.get(
+                    "shell.macos.run", str, expand=False
+                )
+                shell_start = self.app.settings.get(
+                    "shell.macos.start", str, expand=False
+                )
+            else:
+                shell_command = self.app.settings.get(
+                    "shell.linux.run", str, expand=False
+                )
+                shell_start = self.app.settings.get(
+                    "shell.linux.start", str, expand=False
+                )
+
             shell_directory = self.working_directory
             self._shell = Shell(
                 self, shell_directory, shell=shell_command, start=shell_start
@@ -1215,40 +1223,8 @@ class Conversation(containers.Vertical):
         if isinstance(block, MenuProtocol):
             menu_options.extend(block.get_block_menu())
             menu = Menu(block, menu_options)
-
-            # elif isinstance(block, MarkdownBlock):
-            #     if block.name is None:
-            #         self.app.bell()
-            #         return
-
-            #     menu_options.append(
-            #         MenuItem("Explain this", "explain", "e"),
-            #     )
-            #     menu_options.extend(CONVERSATION_MENUS.get(block.name, []))
-
-            #     from toad.code_analyze import get_special_name_from_code
-
-            #     if (
-            #         block.name == "fence"
-            #         and isinstance(block, MarkdownFence)
-            #         and block.source
-            #     ):
-            #         for numeral, name in enumerate(
-            #             get_special_name_from_code(block.source, block.lexer), 1
-            #         ):
-            #             menu_options.append(
-            #                 MenuItem(
-            #                     f"Explain '{name}'", f"explain('{name}')", f"{numeral}"
-            #                 )
-            #             )
-
-            menu = Menu(block, menu_options)
         else:
-            # menu_options.extend(block.get_block_menu())
             menu = Menu(block, menu_options)
-            # self.notify("This block has no menu", title="Menu", severity="information")
-            # self.app.bell()
-            # return
 
         menu.offset = Offset(1, block.region.offset.y)
         await self.mount(menu)
@@ -1277,6 +1253,7 @@ class Conversation(containers.Vertical):
 
         if text:
             self.prompt.append(text)
+            self.flash("Copied to prompt")
             self.focus_prompt()
 
     def action_maximize_block(self) -> None:
@@ -1322,24 +1299,6 @@ class Conversation(containers.Vertical):
 
     async def action_mode_switcher(self) -> None:
         self.prompt.mode_switcher.focus()
-
-    @work
-    async def execute(self, code: str, language: str) -> None:
-        if language == "python":
-            command = "python run"
-        elif language == "bash":
-            command = "sh run"
-        else:
-            self.notify(
-                f"Toad doesn't know how to run '{language}' code yet",
-                title="Run",
-                severity="error",
-            )
-
-        with open("run", mode="wt", encoding="utf-8") as source:
-            source.write(code)
-
-        await self.post_shell(command)
 
     def refresh_block_cursor(self) -> None:
         if (cursor_block := self.cursor_block_child) is not None:
