@@ -211,7 +211,7 @@ class PromptTextArea(HighlightedTextArea):
         else:
             if self.selection.is_empty and not select:
                 row, _column = self.selection[0]
-                if row == 0:
+                if row == 0 and self.shell_mode:
                     self.post_message(
                         messages.HistoryMove(-1, self.shell_mode, self.text)
                     )
@@ -224,7 +224,7 @@ class PromptTextArea(HighlightedTextArea):
         else:
             if self.selection.is_empty and not select:
                 row, _column = self.selection[0]
-                if row == (self.wrapped_document.height - 1):
+                if row == (self.wrapped_document.height - 1) and self.shell_mode:
                     self.post_message(
                         messages.HistoryMove(+1, self.shell_mode, self.text)
                     )

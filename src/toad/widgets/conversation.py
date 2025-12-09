@@ -22,8 +22,8 @@ from textual.content import Content
 from textual.geometry import clamp
 from textual.css.query import NoMatches
 from textual.widget import Widget
-from textual.widgets import Static, TextArea
-from textual.widgets.markdown import MarkdownBlock
+from textual.widgets import Static
+from textual.widgets.markdown import MarkdownBlock, MarkdownFence
 from textual.geometry import Offset, Spacing
 from textual.reactive import var
 from textual.layouts.grid import GridLayout
@@ -218,8 +218,8 @@ class Conversation(containers.Vertical):
     prompt = getters.query_one(Prompt)
     app = getters.app(ToadApp)
     _shell: var[Shell | None] = var(None)
-    shell_history_index: var[int] = var(0, init=False, always_update=True)
-    prompt_history_index: var[int] = var(0, init=False, always_update=True)
+    shell_history_index: var[int] = var(0, init=False)
+    prompt_history_index: var[int] = var(0, init=False)
 
     agent: var[AgentBase | None] = var(None, bindings=True)
     agent_info: var[Content] = var(Content())
@@ -811,6 +811,7 @@ class Conversation(containers.Vertical):
         message.stop()
         if message.shell or not message.body.strip():
             await self.shell_history.open()
+
             if self.shell_history_index == 0:
                 current_shell_command = ""
             else:
@@ -829,10 +830,6 @@ class Conversation(containers.Vertical):
                     and self.shell_history_index <= -self.shell_history.size
                 ):
                     break
-
-        else:
-            await self.prompt_history.open()
-            self.prompt_history_index += message.direction
 
     @work
     async def request_permissions(
@@ -1234,6 +1231,8 @@ class Conversation(containers.Vertical):
         block = self.get_cursor_block()
         if isinstance(block, MenuProtocol):
             text = block.get_block_content("clipboard")
+        elif isinstance(block, MarkdownFence):
+            text = block._content.plain
         elif isinstance(block, MarkdownBlock):
             text = block.source
         else:
@@ -1246,6 +1245,9 @@ class Conversation(containers.Vertical):
         block = self.get_cursor_block()
         if isinstance(block, MenuProtocol):
             text = block.get_block_content("prompt")
+        elif isinstance(block, MarkdownFence):
+            # Copy to prompt leaves MD formatting
+            text = block.source
         elif isinstance(block, MarkdownBlock):
             text = block.source
         else:
