@@ -252,7 +252,7 @@ class ToadApp(App, inherit_bindings=False):
         self._initial_mode = mode
         self.version_meta: VersionMeta | None = None
         self.posthog = Posthog(
-            project_api_key="phc_ffnpS6jMTSxMiW7bUGOj7UIq9j85Me2UBvel0Dwl3x9",
+            project_api_key="phc_mJWPV7GP3ar1i9vxBg2U8aiKsjNgVwum6F6ZggaD4ri",
             host="https://us.i.posthog.com",
         )
         super().__init__()
@@ -297,9 +297,7 @@ class ToadApp(App, inherit_bindings=False):
         return anon_id
 
     @work(exit_on_error=False)
-    async def capture_event(
-        self, event_name: str, **properties: dict[str, Any]
-    ) -> None:
+    async def capture_event(self, event_name: str, **properties: Any) -> None:
         """Capture an event.
 
         Args:
@@ -364,7 +362,7 @@ class ToadApp(App, inherit_bindings=False):
         self.settings.set_all()
 
     async def on_mount(self) -> None:
-        self.capture_event("run")
+        self.capture_event("toad-run")
         if mode := self._initial_mode:
             self.switch_mode(mode)
         self.anon_id
