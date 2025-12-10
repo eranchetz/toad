@@ -15,10 +15,9 @@ I'm using this file to keep track of what works in Toad and what doesn't.
 - Multiline prompt (should be intuitive)
 - Shell commands
 - Colors in shell commands
+- Interactive shell commands / terminals, a few rought edges but generally useful
 
 ## What doesn't work (yet)
 
-- Interactive shell commands / terminals
 - File tree doesn't do much
-- Some odd output in shell on Linux (working on a fix)
 - Chat bots have been temporarily disabled
