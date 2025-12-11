@@ -250,7 +250,9 @@ class CommandAtom(NamedTuple):
     """The path to which this command is expected to apply."""
 
 
-def analyze(project_dir: str, command_line: str) -> Iterable[CommandAtom]:
+def analyze(
+    project_dir: str, current_working_directory: str, command_line: str
+) -> Iterable[CommandAtom]:
     """Analyze a command and generate information about potentially destructive commands.
 
     Args:
@@ -298,13 +300,14 @@ def analyze(project_dir: str, command_line: str) -> Iterable[CommandAtom]:
 
                         yield CommandAtom(command_word, level, target_path)
 
+    current_path = Path(current_working_directory)
     for node in bashlex.parse(command_line):
         if node.kind == "list":
-            yield from recurse_nodes(project_path, node)
+            yield from recurse_nodes(current_path, node)
 
 
 if __name__ == "__main__":
     from rich import print
 
-    for atom in analyze("./", "cd ../;rm foo"):
+    for atom in analyze("./", "./", "cd ../;rm foo"):
         print(atom)
