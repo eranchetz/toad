@@ -217,6 +217,18 @@ def detect(
     danger_style: str = "",
     destructive_style: str = "$text-error on $error-muted 70%",
 ) -> tuple[Sequence[Span], DangerLevel]:
+    """Attempt to detect potentially destructive commands.
+
+    Args:
+        project_directory: Project directory.
+        current_working_directory: Current working directory.
+        command_line: Bash command.
+        danger_style: Style to highlight dangerous commands.
+        destructive_style: Style highlight destructive commands.
+
+    Returns:
+        A tuple of spans to highlight the command, and a `DangerLevel` enumeration.
+    """
     try:
         atoms = list(
             analyze(project_directory, current_working_directory, command_line)
