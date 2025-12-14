@@ -84,10 +84,6 @@ class SlashComplete(containers.VerticalGroup):
     def on_descendant_blur(self) -> None:
         self.post_message(Dismiss(self))
 
-    @on(widgets.OptionList.OptionHighlighted)
-    def on_option_list_option_highlighted(self, event) -> None:
-        event.stop()
-
     @on(widgets.Input.Changed)
     def on_input_changed(self, event: widgets.Input.Changed) -> None:
         event.stop()
@@ -155,7 +151,11 @@ class SlashComplete(containers.VerticalGroup):
         self.option_list.set_options(
             Option(row, id=command_name) for row, command_name in rows
         )
-        self.option_list.highlighted = 0
+        if self.display:
+            self.option_list.highlighted = 0
+        else:
+            with self.option_list.prevent(widgets.OptionList.OptionHighlighted):
+                self.option_list.highlighted = 0
 
     def action_cursor_down(self) -> None:
         self.option_list.action_cursor_down()

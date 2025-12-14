@@ -127,6 +127,7 @@ class PromptTextArea(HighlightedTextArea):
         pass
 
     def watch_slash_commands(self, slash_commands: list[SlashCommand]) -> None:
+        """A tuple of slash commands for performance reasons (used with `str.startswith`)."""
         self.slash_command_prefixes = tuple(
             [slash_command.command for slash_command in slash_commands]
         )
