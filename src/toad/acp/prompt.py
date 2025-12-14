@@ -20,6 +20,8 @@ def build(project_path: Path, prompt: str) -> list[protocol.ContentBlock]:
 
     prompt_content.append({"type": "text", "text": prompt})
     for path, _, _ in extract_paths_from_prompt(prompt):
+        if path.endswith("/"):
+            continue
         try:
             resource = load_resource(project_path, Path(path))
         except ResourceError:

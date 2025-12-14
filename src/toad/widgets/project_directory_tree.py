@@ -34,11 +34,9 @@ class ProjectDirectoryTree(DirectoryTree):
         try:
             if git_ignore_path.is_file():
                 spec_text = git_ignore_path.read_text()
-                print(spec_text)
                 spec = PathSpec.from_lines(
                     pathspec.patterns.GitWildMatchPattern, spec_text.splitlines()
                 )
-                print(spec)
                 return spec
         except OSError:
             return None

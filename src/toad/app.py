@@ -253,9 +253,19 @@ class ToadApp(App, inherit_bindings=False):
         project_dir: str | None = None,
         mode: str | None = None,
     ) -> None:
+        """Toad app.
+
+        Args:
+            agent_data: Agent data to run.
+            project_dir: Project directory.
+            mode: Initial mode.
+            agent: Agent identity or shor name.
+        """
         self.settings_changed_signal = Signal(self, "settings_changed")
         self.agent_data = agent_data
-        self.project_dir = project_dir
+        self.project_dir = (
+            None if project_dir is None else Path(project_dir).expanduser().resolve()
+        )
         self._initial_mode = mode
         self.version_meta: VersionMeta | None = None
         self.posthog = Posthog(
@@ -354,7 +364,7 @@ class ToadApp(App, inherit_bindings=False):
 
         self.settings_changed_signal.publish((key, value))
 
-    def on_load(self) -> None:
+    async def on_load(self) -> None:
         settings_path = self.settings_path
         if settings_path.exists():
             settings = json.loads(settings_path.read_text("utf-8"))
@@ -370,9 +380,11 @@ class ToadApp(App, inherit_bindings=False):
 
     async def on_mount(self) -> None:
         self.capture_event("toad-run")
+        self.anon_id
+
         if mode := self._initial_mode:
             self.switch_mode(mode)
-        self.anon_id
+
         self.set_timer(1, self.run_version_check)
 
     def run_on_exit(self):

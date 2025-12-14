@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 
+from functools import lru_cache
 from operator import itemgetter
 from pathlib import Path
 import re
@@ -27,6 +28,18 @@ from toad import directory
 from toad.messages import Dismiss, InsertPath, PromptSuggestion
 
 
+class PathFuzzySearch(FuzzySearch):
+    @classmethod
+    @lru_cache(maxsize=1024)
+    def get_first_letters(cls, candidate: str) -> frozenset[int]:
+        return frozenset(
+            {
+                0,
+                *[match.start() + 1 for match in re.finditer(r"/", candidate)],
+            }
+        )
+
+
 class PathSearch(containers.VerticalGroup):
     CURSOR_BINDING_GROUP = Binding.Group(description="Move selection")
     BINDINGS = [
@@ -45,7 +58,7 @@ class PathSearch(containers.VerticalGroup):
     ]
 
     def get_fuzzy_search(self) -> FuzzySearch:
-        return FuzzySearch(case_sensitive=True)
+        return PathFuzzySearch(case_sensitive=False)
 
     root: var[Path] = var(Path("./"))
     paths: var[list[Path]] = var(list)
@@ -81,6 +94,7 @@ class PathSearch(containers.VerticalGroup):
             )
             for index, path in enumerate(self.paths)
         ]
+
         scores = sorted(
             [score for score in scores if score[0]], key=itemgetter(0), reverse=True
         )
@@ -108,8 +122,8 @@ class PathSearch(containers.VerticalGroup):
     def action_dismiss(self) -> None:
         self.post_message(Dismiss(self))
 
-    def focus(self) -> None:
-        self.input.focus()
+    def focus(self, scroll_visible: bool = False) -> Self:
+        return self.input.focus(scroll_visible=scroll_visible)
 
     @on(Input.Changed)
     async def on_input_changed(self, event: Input.Changed):
@@ -135,7 +149,7 @@ class PathSearch(containers.VerticalGroup):
     def watch_root(self, root: Path) -> None:
         pass
 
-    @work(thread=True)
+    @work(thread=True, exit_on_error=False)
     async def get_path_spec(self, git_ignore_path: Path) -> PathSpec | None:
         """Get a path spec instance if there is a .gitignore file present.
 
@@ -165,7 +179,7 @@ class PathSearch(containers.VerticalGroup):
         self.loading = True
 
         path_spec = await self.get_path_spec(root / ".gitignore").wait()
-        paths = await directory.scan(root, path_spec=path_spec)
+        paths = await directory.scan(root, path_spec=path_spec, add_directories=True)
 
         paths = [path.absolute() for path in paths]
         paths.sort(key=lambda path: (len(path.parts), str(path)))
@@ -179,13 +193,14 @@ class PathSearch(containers.VerticalGroup):
         return LoadingIndicator()
 
     def highlight_path(self, path: str) -> Content:
+        content = Content.styled(path, "dim")
         if path.startswith("."):
-            return Content.styled(path, "$foreground-muted")
-        content = Content.styled(path, "$foreground-muted")
-        if "/" in path:
-            content = content.stylize("$text-success dim", path.rfind("/") + 1)
-        else:
-            content = content.stylize("$text-success dim")
+            return content
+        if not path.endswith("/"):
+            if "/" in path:
+                content = content.stylize("$text-success", path.rfind("/") + 1)
+            else:
+                content = content.stylize("$text-success dim")
         if (match := re.search(r"\.(.*$)", content.plain)) is not None:
             content = content.stylize("not dim", match.start(1), match.end(1))
         return content
@@ -193,8 +208,18 @@ class PathSearch(containers.VerticalGroup):
     def watch_paths(self, paths: list[Path]) -> None:
         self.option_list.highlighted = None
 
+        def path_display(path: Path) -> str:
+            try:
+                is_directory = path.is_dir()
+            except OSError:
+                is_directory = False
+            if is_directory:
+                return str(path.relative_to(self.root)) + "/"
+            else:
+                return str(path.relative_to(self.root))
+
         self.highlighted_paths = [
-            self.highlight_path(str(path.relative_to(self.root))) for path in paths
+            self.highlight_path(path_display(path)) for path in paths
         ]
         self.option_list.set_options(
             [

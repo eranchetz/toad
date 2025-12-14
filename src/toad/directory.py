@@ -21,6 +21,7 @@ class ScanJob:
         exclude_dirs: Sequence[str],
         exclude_files: Sequence[str],
         path_spec: PathSpec | None = None,
+        add_directories=False,
     ) -> None:
         self.queue = queue
         self.results = results
@@ -28,6 +29,7 @@ class ScanJob:
         self.exclude_files = exclude_files
         self.name = name
         self.path_spec = path_spec
+        self.add_directories = add_directories
 
     def start(self) -> None:
         self._task = asyncio.create_task(self.run())
@@ -63,6 +65,7 @@ class ScanJob:
     async def run(self) -> None:
         queue = self.queue
         results = self.results
+        add_directories = self.add_directories
         while True:
             try:
                 scan_path = await queue.get()
@@ -85,6 +88,8 @@ class ScanJob:
                         if fnmatch.fnmatch(str_path, exclude):
                             break
                     else:
+                        if add_directories:
+                            results.append(path)
                         await queue.put(path)
             queue.task_done()
 
@@ -114,6 +119,7 @@ async def scan(
     exclude_dirs: Sequence[str] | None = None,
     exclude_files: Sequence[str] | None = None,
     path_spec: PathSpec | None = None,
+    add_directories: bool = False,
 ) -> list[Path]:
     """Scan a directory for paths.
 
@@ -136,6 +142,7 @@ async def scan(
             exclude_dirs=exclude_dirs or [],
             exclude_files=exclude_files or [],
             path_spec=path_spec,
+            add_directories=add_directories,
         )
         for index in range(max_simultaneous)
     ]

@@ -2,16 +2,71 @@ import sys
 
 import click
 from toad.app import ToadApp
+from toad.agent_schema import Agent
 
 
-@click.group(invoke_without_command=True)
-@click.pass_context
-@click.option("--project-dir", metavar="PATH", default=None)
-def main(ctx, project_dir: str | None):
-    """Toad. The Batrachian AI."""
-    if ctx.invoked_subcommand is not None:
-        return
-    app = ToadApp(mode="store", project_dir=project_dir)
+async def get_agent_data(launch_agent) -> Agent | None:
+    launch_agent = launch_agent.lower()
+
+    from toad.agents import read_agents, AgentReadError
+
+    try:
+        agents = await read_agents()
+    except AgentReadError:
+        agents = {}
+
+    for agent_data in agents.values():
+        if (
+            agent_data["short_name"].lower() == launch_agent
+            or agent_data["identity"].lower() == launch_agent
+        ):
+            launch_agent = agent_data["identity"]
+            break
+
+    return agents.get(launch_agent)
+
+
+class DefaultCommandGroup(click.Group):
+    def parse_args(self, ctx, args):
+        if "--help" in args or "-h" in args:
+            return super().parse_args(ctx, args)
+        # Check if first arg is a known subcommand
+        if not args or args[0] not in self.commands:
+            # If not a subcommand, prepend the default command name
+            args.insert(0, "run")
+        return super().parse_args(ctx, args)
+
+    def format_usage(self, ctx, formatter):
+        formatter.write_usage(ctx.command_path, "[OPTIONS] PATH OR COMMAND [ARGS]...")
+
+
+@click.group(cls=DefaultCommandGroup)
+def main():
+    """Toad—AI for your terminal."""
+
+
+# @click.group(invoke_without_command=True)
+# @click.pass_context
+@main.command("run")
+@click.argument("project_dir", metavar="PATH", required=False, default=".")
+@click.option("-a", "--agent", metavar="AGENT", default="")
+def run(project_dir: str = ".", agent: str = "1"):
+    """Run an agent (with also run with `toad PATH`)."""
+    # if ctx.invoked_subcommand is not None:
+    #     return
+
+    if agent:
+        import asyncio
+
+        agent_data = asyncio.run(get_agent_data(agent))
+    else:
+        agent_data = None
+
+    app = ToadApp(
+        mode=None if agent_data else "store",
+        agent_data=agent_data,
+        project_dir=project_dir,
+    )
     app.run()
     app.run_on_exit()
 

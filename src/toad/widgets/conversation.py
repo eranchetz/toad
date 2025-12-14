@@ -590,7 +590,7 @@ class Conversation(containers.Vertical):
             await self.prompt_history.append(event.body)
             self.prompt_history_index = 0
             if text.startswith("/") and await self.slash_command(text):
-                # Toad has processes the slash command.
+                # Toad has processed the slash command.
                 return
             await self.post(UserInput(text))
             self._loading = await self.post(Loading("Please wait..."), loading=True)
@@ -1099,6 +1099,8 @@ class Conversation(containers.Vertical):
     ) -> WidgetType:
         if self._loading is not None:
             await self._loading.remove()
+        if not self.contents.is_attached:
+            return widget
         await self.contents.mount(widget)
         widget.loading = loading
         if anchor:

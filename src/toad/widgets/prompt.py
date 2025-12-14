@@ -337,7 +337,14 @@ class PromptTextArea(HighlightedTextArea):
                 direction = 0
             line = self.document.get_line(y)
 
-            if y == 0 and x == 1 and direction == +1 and line and line[0] == "/":
+            if (
+                not self.shell_mode
+                and y == 0
+                and x == 1
+                and direction == +1
+                and line
+                and line[0] == "/"
+            ):
                 self.post_message(InvokeSlashComplete())
                 return
 
