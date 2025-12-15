@@ -379,6 +379,7 @@ class Agent(AgentBase):
                 stderr=PIPE,
                 env=env,
                 cwd=str(self.project_root_path),
+                limit=10 * 1024 * 1024,
             )
         except Exception as error:
             self.post_message(AgentFail("Failed to start agent", details=str(error)))
