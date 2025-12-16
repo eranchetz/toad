@@ -55,7 +55,7 @@ class DefaultCommandGroup(click.Group):
 
 @click.group(cls=DefaultCommandGroup)
 def main():
-    """Toad—AI for your terminal."""
+    """🐸 Toad — AI for your terminal."""
 
 
 # @click.group(invoke_without_command=True)
@@ -148,7 +148,7 @@ def acp(
     project_dir: str | None,
     serve: bool = False,
 ) -> None:
-    """Run an ACP client."""
+    """Run an ACP agent."""
 
     from rich import print
 
@@ -203,7 +203,7 @@ def acp(
 
 @main.command("settings")
 def settings() -> None:
-    """Configure settings."""
+    """Settings information."""
     app = ToadApp()
     print(f"{app.settings_path}")
 
