@@ -322,6 +322,7 @@ class ToadApp(App, inherit_bindings=False):
         POSTHOG_HOST = "https://us.i.posthog.com"
         POSTHOG_EVENT_URL = f"{POSTHOG_HOST}/i/v0/e/"
 
+        import platform
         import httpx
 
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -333,8 +334,8 @@ class ToadApp(App, inherit_bindings=False):
             "distinct_id": self.anon_id,
             "properties": event_properties,
             "timestamp": timestamp,
+            "os": platform.system(),
         }
-        self.log(body_json)
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(POSTHOG_EVENT_URL, json=body_json)

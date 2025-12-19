@@ -511,14 +511,14 @@ class Conversation(containers.Vertical):
 
         self.agent_ready = True
 
-    def on_unmount(self) -> None:
+    async def on_unmount(self) -> None:
         if self._agent_data is not None and self.session_start_time is not None:
             session_time = monotonic() - self.session_start_time
-            self.app.capture_event(
+            await self.app.capture_event(
                 "agent-session-end",
                 agent=self._agent_data["identity"],
                 duration=session_time,
-            )
+            ).wait()
 
     @on(AgentFail)
     async def on_agent_fail(self, message: AgentFail) -> None:
