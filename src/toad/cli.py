@@ -102,6 +102,7 @@ def run(port: int, host: str, serve: bool, project_dir: str = ".", agent: str = 
         from textual_serve.server import Server
 
         command_args = sys.argv
+        # Remove serve flag from args (could be either --serve or -s)
         for flag in ["--serve", "-s"]:
             try:
                 command_args.remove(flag)
