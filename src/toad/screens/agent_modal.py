@@ -16,8 +16,14 @@ from toad.agent_schema import Action, Agent, OS, Command
 from toad.app import ToadApp
 
 
+class DescriptionContainer(containers.VerticalScroll):
+    def allow_focus(self) -> bool:
+        """Focus only if it can be scrolled."""
+        return self.show_vertical_scrollbar
+
+
 class AgentModal(ModalScreen):
-    AUTO_FOCUS = "#launcher-checkbox"
+    AUTO_FOCUS = "Select#action-select"
 
     BINDINGS = [
         Binding("escape", "dismiss(None)", "Dismiss", show=False),
@@ -57,7 +63,7 @@ class AgentModal(ModalScreen):
         script_choices.append((f"Launch {agent['name']}", "__launch__"))
 
         with containers.Vertical(id="container"):
-            with containers.VerticalScroll(id="description-container"):
+            with DescriptionContainer(id="description-container"):
                 yield widgets.Markdown(agent["help"], id="description")
             with containers.VerticalGroup():
                 with containers.HorizontalGroup():

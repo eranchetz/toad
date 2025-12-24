@@ -150,15 +150,17 @@ AgentModal {
     align: center middle;
     # background: $surface 80%;
     #container {
+        
         margin: 2 4 1 4;
         padding: 0 1 0 0;
         max-width: 100;
         height: auto;
         border: thick $primary 20%;
 
-        #description-container {
+        DescriptionContainer {
             height: auto;
-            padding: 0 0 1 1;
+            padding: 0 0 0 0;
+            margin: 0 0 1 1;
             max-height: 20;
             overflow-y: auto;            
             Markdown {                
@@ -166,6 +168,11 @@ AgentModal {
                 MarkdownH1 {
                     margin: 1 1 1 0
                 }
+            }
+            
+            &:focus {
+                background: $primary 7%;
+                
             }
         }
 

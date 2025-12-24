@@ -17,8 +17,6 @@ from textual.css.query import NoMatches
 from textual.message import Message
 from textual import containers
 from textual import widgets
-from textual.selection import Selection
-from textual.widget import Widget
 
 import toad
 from toad.app import ToadApp
@@ -159,13 +157,14 @@ class Launcher(containers.VerticalGroup):
         )
         agents = self._agents
         self.set_class(not launcher_agents, "-empty")
-        with LauncherGridSelect(
-            id="launcher-grid-select", min_column_width=32, max_column_width=32
-        ):
-            for digit, identity in zip_longest(self.DIGITS, launcher_agents):
-                if identity is None:
-                    break
-                yield LauncherItem(digit or "", agents[identity])
+        if launcher_agents:
+            with LauncherGridSelect(
+                id="launcher-grid-select", min_column_width=32, max_column_width=32
+            ):
+                for digit, identity in zip_longest(self.DIGITS, launcher_agents):
+                    if identity is None:
+                        break
+                    yield LauncherItem(digit or "", agents[identity])
 
         if not launcher_agents:
             yield widgets.Label("Chose your fighter below!", classes="no-agents")
@@ -244,6 +243,7 @@ class StoreScreen(Screen):
 
     agents_view = getters.query_one("#agents-view", AgentGridSelect)
     launcher = getters.query_one("#launcher", Launcher)
+    container = getters.query_one("#container", Container)
 
     app = getters.app(ToadApp)
 
@@ -405,9 +405,10 @@ class StoreScreen(Screen):
                 severity="error",
             )
         else:
-            await self.query_one("#container").mount_compose(self.compose_agents())
+            await self.container.mount_compose(self.compose_agents())
             with suppress(NoMatches):
-                self.query("GridSelect").first().focus()
+                first_grid = self.container.query(GridSelect).first()
+                first_grid.focus(scroll_visible=False)
 
     def setting_updated(self, setting: tuple[str, object]) -> None:
         key, value = setting
