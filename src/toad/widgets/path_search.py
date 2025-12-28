@@ -134,11 +134,14 @@ class PathSearch(containers.VerticalGroup):
     filter = var("")
     fuzzy_search: var[FuzzySearch] = var(Initialize(get_fuzzy_search))
     show_tree_picker: var[bool] = var(False)
-    tree_path = var("")
 
     option_list = getters.query_one(OptionList)
     tree_view = getters.query_one(ProjectDirectoryTree)
     input = getters.query_one(Input)
+
+    def __init__(self, root: Path) -> None:
+        super().__init__()
+        self.root = root
 
     def compose(self) -> ComposeResult:
         with widgets.ContentSwitcher(initial="path-search-fuzzy"):
@@ -151,7 +154,7 @@ class PathSearch(containers.VerticalGroup):
                 yield widgets.Static(
                     "tree view \t[r]▌tab▐[/r] fuzzy search", classes="message"
                 )
-                yield ProjectDirectoryTree(self.root)
+                yield ProjectDirectoryTree(self.root).data_bind(path=PathSearch.root)
 
     def on_mount(self) -> None:
         tree = self.tree_view
@@ -252,9 +255,13 @@ class PathSearch(containers.VerticalGroup):
 
         dir_entry = event.node.data
         if dir_entry is not None:
-            path = Path(dir_entry.path).resolve().relative_to(self.root.resolve())
-            self.tree_path = str(path)
-            self.post_message(PromptSuggestion(self.tree_path))
+            try:
+                path = Path(dir_entry.path).resolve().relative_to(self.root.resolve())
+            except ValueError:
+                # Being defensive here, shouldn't occur
+                return
+            tree_path = str(path)
+            self.post_message(PromptSuggestion(tree_path))
 
     @on(DirectoryTree.FileSelected)
     def on_file_selected(self, event: DirectoryTree.FileSelected) -> None:
@@ -262,9 +269,12 @@ class PathSearch(containers.VerticalGroup):
 
         dir_entry = event.node.data
         if dir_entry is not None:
-            path = Path(dir_entry.path).resolve().relative_to(self.root.resolve())
-            self.tree_path = str(path)
-            self.post_message(InsertPath(self.tree_path))
+            try:
+                path = Path(dir_entry.path).resolve().relative_to(self.root.resolve())
+            except ValueError:
+                return
+            tree_path = str(path)
+            self.post_message(InsertPath(tree_path))
             self.post_message(Dismiss(self))
 
     @on(Input.Changed)

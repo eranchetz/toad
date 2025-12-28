@@ -423,6 +423,8 @@ class Prompt(containers.VerticalGroup):
 
     def __init__(
         self,
+        project_path: Path,
+        *,
         name: str | None = None,
         id: str | None = None,
         classes: str | None = None,
@@ -432,6 +434,7 @@ class Prompt(containers.VerticalGroup):
         super().__init__(name=name, id=id, classes=classes, disabled=disabled)
         self.ask_queue: list[Ask] = []
         self.complete_callback = complete_callback
+        self.project_path = project_path
 
     @property
     def text(self) -> str:
@@ -517,6 +520,8 @@ class Prompt(containers.VerticalGroup):
         self.update_prompt()
 
     def watch_working_directory(self, working_directory: str) -> None:
+        if not working_directory:
+            return
         out_of_bounds = not Path(working_directory).is_relative_to(self.project_path)
         if out_of_bounds and not self.has_class("-working-directory-out-of-bounds"):
             self.post_message(
@@ -697,7 +702,7 @@ class Prompt(containers.VerticalGroup):
             self.prompt_text_area.suggestion = suggestion[len(self.text) :]
 
     def compose(self) -> ComposeResult:
-        yield PathSearch().data_bind(root=Prompt.project_path)
+        yield PathSearch(self.project_path).data_bind(root=Prompt.project_path)
         yield SlashComplete().data_bind(slash_commands=Prompt.slash_commands)
         with PromptContainer(id="prompt-container"):
             yield Question()

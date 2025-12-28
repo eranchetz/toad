@@ -5,6 +5,7 @@ import asyncio
 
 from textual.binding import Binding
 from textual.widgets import DirectoryTree
+from textual.widgets.directory_tree import DirEntry
 
 from toad.path_filter import PathFilter
 
@@ -32,6 +33,19 @@ class ProjectDirectoryTree(DirectoryTree):
         path = Path(path).resolve() if isinstance(path, str) else path.resolve()
         super().__init__(path, name=name, id=id, classes=classes, disabled=disabled)
         self.path_filter: PathFilter | None = None
+
+    async def watch_path(self) -> None:
+        """Watch for changes to the `path` of the directory tree.
+
+        If the path is changed the directory tree will be repopulated using
+        the new value as the root.
+        """
+        has_cursor = self.cursor_node is not None
+        self.reset_node(self.root, str(self.path), DirEntry(self.PATH(self.path)))
+        await self.reload()
+        if has_cursor:
+            self.cursor_line = 0
+        self.scroll_to(0, 0, animate=False)
 
     async def on_mount(self) -> None:
         path = Path(self.path) if isinstance(self.path, str) else self.path
