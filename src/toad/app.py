@@ -402,6 +402,8 @@ class ToadApp(App, inherit_bindings=False):
 
         if mode := self._initial_mode:
             self.switch_mode(mode)
+        else:
+            self.push_screen(self.get_main_screen())
 
         self.set_timer(1, self.run_version_check)
 
@@ -446,7 +448,7 @@ class ToadApp(App, inherit_bindings=False):
         self.version_meta = version_meta
         self.update_required = update_required
 
-    def get_default_screen(self) -> MainScreen:
+    def get_main_screen(self) -> MainScreen:
         """Make the default screen.
 
         Returns:
