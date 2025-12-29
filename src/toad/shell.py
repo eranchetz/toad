@@ -115,9 +115,11 @@ class Shell:
         if self.master is None:
             return 0
         text_bytes = text.encode("utf-8", "ignore") if isinstance(text, str) else text
+
         if hide_echo:
             self._hide_echo.add(text_bytes)
-        return await asyncio.to_thread(os.write, self.master, text_bytes)
+        result = await asyncio.to_thread(os.write, self.master, text_bytes)
+        return result
 
     async def run(self) -> None:
         current_directory = self.working_directory
@@ -190,6 +192,7 @@ class Shell:
                     self._hide_echo.discard(string_bytes)
                     if not data:
                         data = b"\r"
+                        break
 
             if line := unicode_decoder.decode(data, final=not data):
                 if self.terminal is None or self.terminal.is_finalized:
@@ -200,6 +203,7 @@ class Shell:
                     # if previous_state is not None:
                     #     self.terminal.set_state(previous_state)
                     self.terminal.set_write_to_stdin(self.write)
+
                 if await self.terminal.write(line) and not self.terminal.display:
                     if (
                         self.terminal.alternate_screen

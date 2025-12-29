@@ -1161,9 +1161,10 @@ class Conversation(containers.Vertical):
         from toad.widgets.shell_terminal import ShellTerminal
 
         if self._terminal is not None:
-            self._terminal.finalize()
             if self._terminal.state.buffer.is_blank:
                 await self._terminal.remove()
+            self._terminal.finalize()
+
         terminal_width, terminal_height = self.get_terminal_dimensions()
         terminal = ShellTerminal(
             size=(terminal_width, terminal_height),
