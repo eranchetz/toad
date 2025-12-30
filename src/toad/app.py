@@ -310,6 +310,11 @@ class ToadApp(App, inherit_bindings=False):
         return anon_id
 
     def copy_to_clipboard(self, text: str) -> None:
+        """Override copy to clipboard to use pyperclip first, then OSC 52.
+
+        Args:
+            text: Text to copy.
+        """
         if self._supports_pyperclip is None:
             try:
                 import pyperclip
@@ -318,12 +323,13 @@ class ToadApp(App, inherit_bindings=False):
             else:
                 self._supports_pyperclip = True
 
-        import pyperclip
+        if self._supports_pyperclip:
+            import pyperclip
 
-        try:
-            pyperclip.copy(text)
-        except Exception:
-            pass
+            try:
+                pyperclip.copy(text)
+            except Exception:
+                pass
         super().copy_to_clipboard(text)
 
     @work(exit_on_error=False)
