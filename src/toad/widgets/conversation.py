@@ -150,6 +150,10 @@ class Contents(containers.VerticalGroup, can_focus=False):
             )
         return placements
 
+    def _refresh_styles(self) -> None:
+        """Prevent expensive update of styles"""
+        # TODO: This is undoubtedly bit of a hack.
+
 
 class ContentsGrid(containers.Grid):
     def pre_layout(self, layout) -> None:
@@ -1178,13 +1182,12 @@ class Conversation(containers.Vertical):
             self.window.anchor()
         self._require_check_prune = True
         self.call_after_refresh(self.check_prune)
-
         return widget
 
     async def check_prune(self) -> None:
         """Check if a prune is required."""
         if self._require_check_prune:
-            await self.prune_window(2000, 3000)
+            await self.prune_window(1500, 2500)
             self._require_check_prune = False
 
     async def prune_window(self, low_mark: int, high_mark: int) -> None:
