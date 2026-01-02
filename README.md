@@ -19,9 +19,14 @@ Run coding agents seamlessly under a single beautiful terminal UI, thanks to the
   </tr>
     
   </tbody>
-
   
 </table>
+
+## Video
+
+Watch a preview of the Toad User Interface:
+
+https://github.com/user-attachments/assets/ced36f4b-db02-4d29-8a0a-14ec64b22881
 
 ## Compatibility
 
@@ -147,6 +152,7 @@ This project is trialling a non-traditional approach to issues.
 Before an issue is created, there must be a post in Dicussions, approved by a Toad dev (Currently @willmcgugan).
 
 By allowing the discussions to happen in the Discussion tabs, issues can be reserved for actionable tasks with a clear description and goal.
+
 
 
 
